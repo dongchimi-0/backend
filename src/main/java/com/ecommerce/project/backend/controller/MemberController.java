@@ -21,7 +21,7 @@ public class MemberController {
             memberService.signup(request);
             return ResponseEntity.ok("회원가입 성공!");
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(409).body(" " + e.getMessage());
+            return ResponseEntity.status(409).body("회원가입 실패" + e.getMessage());
         }
     }
 }

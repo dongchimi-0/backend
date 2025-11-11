@@ -10,14 +10,17 @@ import lombok.*;
 @Builder
 public class Member {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     private String email;
     private String password;
     private String name;
     private String phone;
+
     private String address;
+    private String addressDetail;
 
     private String role = "USER";
 }
