@@ -22,19 +22,13 @@ public class MemberService {
         // 비밀번호 암호화
         member.setPassword(passwordEncoder.encode(member.getPassword()));
 
+        // ✅ 이름, 전화번호, 주소가 비어 있으면 기본값 처리 (선택)
+        if (member.getName() == null) member.setName("미기입");
+        if (member.getPhone() == null) member.setPhone("미기입");
+        if (member.getAddress() == null) member.setAddress("미기입");
+
         // 저장
         return memberRepository.save(member);
     }
-
-    // 로그인
-    public Member login(String email, String password) {
-        Member member = memberRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 이메일입니다."));
-
-        if (!passwordEncoder.matches(password, member.getPassword())) {
-            throw new IllegalArgumentException("비밀번호가 일치하지 않습니다.");
-        }
-
-        return member;
-    }
 }
+

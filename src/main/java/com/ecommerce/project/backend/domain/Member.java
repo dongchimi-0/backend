@@ -15,5 +15,10 @@ public class Member {
 
     private String email;
     private String password;
+    private String name;
+    private String phone;
+    private String address;
+
     private String role = "USER";
 }
+
