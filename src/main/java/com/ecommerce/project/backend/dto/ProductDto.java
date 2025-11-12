@@ -1,6 +1,7 @@
 package com.ecommerce.project.backend.dto;
 
 import com.ecommerce.project.backend.domain.Product;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.math.BigDecimal;
@@ -20,13 +21,25 @@ public class ProductDto {
     private BigDecimal sellPrice;
     private Integer stock;
     private Boolean isOption;
+
+    @JsonProperty("mainImg")
     private String mainImg;
     private Integer productStatus;
     private Boolean isShow;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-    public static ProductDto fromEntity(Product p) {
+
+    public static ProductDto fromEntity(Product p, String baseUrl) {
+        String fullUrl = null;
+        if (p.getMainImg() != null) {
+            if (p.getMainImg().startsWith("/")) {
+                fullUrl = baseUrl + p.getMainImg();
+            } else {
+                fullUrl = baseUrl + "/" + p.getMainImg();
+            }
+        }
+
         return ProductDto.builder()
                 .productId(p.getProductId())
                 .productName(p.getProductName())
@@ -35,11 +48,13 @@ public class ProductDto {
                 .sellPrice(p.getSellPrice())
                 .stock(p.getStock())
                 .isOption(p.getIsOption())
-                .mainImg(p.getMainImg())
+                .mainImg(fullUrl)
                 .productStatus(p.getProductStatus())
                 .isShow(p.getIsShow())
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .build();
     }
+
+
 }
