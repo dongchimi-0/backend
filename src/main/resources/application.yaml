@@ -27,5 +27,7 @@ server:
   port: 8080
   address: 0.0.0.0
 
+musinsa:
+  image-base-url: ${MUSINSA_IMAGE_BASE_URL}
 
 
