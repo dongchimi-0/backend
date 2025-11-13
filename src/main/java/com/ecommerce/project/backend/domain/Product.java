@@ -1,5 +1,6 @@
 package com.ecommerce.project.backend.domain;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -60,8 +61,9 @@ public class Product {
     private List<ProductImage> images = new ArrayList<>();
 
     // 옵션 상품 (1:N 매핑)
-//    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
-//    private List<ProductOption> options = new ArrayList<>();
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<ProductOption> options = new ArrayList<>();
 
     //CategoryLink
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL)
@@ -94,15 +96,15 @@ public class Product {
     }
 
 //    /** 옵션 상품 재고 합산 (옵션 상품일 경우 호출) */
-//    public void updateTotalStockFromOptions() {
-//        if (!isOption) return; // 단일상품이면 패스
-//
-//        int totalStock = options.stream()
-//                .mapToInt(ProductOption::getStock)
-//                .sum();
-//
-//        this.stock = totalStock;
-//    }
+    public void updateTotalStockFromOptions() {
+        if (!isOption) return; // 단일상품이면 패스
+
+        int totalStock = options.stream()
+                .mapToInt(ProductOption::getStock)
+                .sum();
+
+        this.stock = totalStock;
+    }
 
     /** 판매가 수정 */
     public void updateSellPrice(BigDecimal newSellPrice) {
