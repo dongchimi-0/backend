@@ -13,7 +13,7 @@ import java.util.List;
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
 // 배포시 주소 주의
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class ProductController {
 
     private final ProductService productService;
@@ -36,6 +36,7 @@ public class ProductController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류가 발생했습니다.");
         }
     }
+
 
 
     /** 상품명 검색 */
