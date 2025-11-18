@@ -37,6 +37,7 @@ public class ProductDto {
 
 
     private List<String> subImages;
+    private List<ProductOptionDto> options;
 
 
     public static ProductDto fromEntity(Product p, String baseUrl) {
@@ -49,6 +50,15 @@ public class ProductDto {
             } else {
                 fullUrl = baseUrl + "/" + p.getMainImg();
             }
+        }
+
+        // 2) 옵션 리스트 변환 (★ 이 부분이 빠져 있어서 옵션이 안 뜬 것!)
+
+        List<ProductOptionDto> optionList = new ArrayList<>();
+        if (p.getOptions() != null) {
+            optionList = p.getOptions().stream()
+                    .map(ProductOptionDto::fromEntity)
+                    .collect(Collectors.toList());
         }
 
 
@@ -82,6 +92,7 @@ public class ProductDto {
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
                 .subImages(subImageList)
+                .options(optionList)
                 .build();
     }
 

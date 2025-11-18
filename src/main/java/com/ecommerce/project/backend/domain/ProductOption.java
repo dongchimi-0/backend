@@ -1,5 +1,6 @@
 package com.ecommerce.project.backend.domain;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
@@ -25,7 +26,7 @@ public class ProductOption {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
-    @JsonManagedReference
+    @JsonBackReference
     private Product product; // 어떤 상품의 옵션인지 (FK)
 
     @Column(name = "consumer_price", precision = 10, scale = 2)
