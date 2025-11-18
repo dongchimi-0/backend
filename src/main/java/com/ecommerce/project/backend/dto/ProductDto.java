@@ -6,6 +6,9 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Getter
 @Setter
@@ -21,16 +24,24 @@ public class ProductDto {
     private BigDecimal sellPrice;
     private Integer stock;
     private Boolean isOption;
+    private String thumbnailUrl;
+
 
     @JsonProperty("mainImg")
     private String mainImg;
+
     private Integer productStatus;
     private Boolean isShow;
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
 
+    private List<String> subImages;
+
+
     public static ProductDto fromEntity(Product p, String baseUrl) {
+
+        // 메인 이미지 URL
         String fullUrl = null;
         if (p.getMainImg() != null) {
             if (p.getMainImg().startsWith("/")) {
@@ -40,6 +51,23 @@ public class ProductDto {
             }
         }
 
+
+        // 서브 이미지 URL
+        List<String> subImageList = new ArrayList<>();
+        if (p.getImages() != null) {
+            subImageList = p.getImages().stream()
+                    .map(img -> {
+                        // 앞에 "/" 붙어 있으면 그대로
+                        if (img.getImageUrl().startsWith("/")) {
+                            return baseUrl + img.getImageUrl();
+                        }
+                        // 아니면 "/" 를 붙여준다
+                        return baseUrl + "/" + img.getImageUrl();
+                    })
+                    .collect(Collectors.toList());
+        }
+
+        // ----------- DTO 변환 -----------
         return ProductDto.builder()
                 .productId(p.getProductId())
                 .productName(p.getProductName())
@@ -53,6 +81,7 @@ public class ProductDto {
                 .isShow(p.getIsShow())
                 .createdAt(p.getCreatedAt())
                 .updatedAt(p.getUpdatedAt())
+                .subImages(subImageList)
                 .build();
     }
 

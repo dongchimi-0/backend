@@ -27,11 +27,11 @@ public class ProductService {
         List<Product> products = productRepository.findAllVisibleProducts();
 
         if (products == null || products.isEmpty()) {
-            System.out.println("⚠️ [ProductService] 노출 중인 상품이 없습니다.");
+            System.out.println("[ProductService] 노출 중인 상품이 없습니다.");
             return List.of();
         }
 
-        System.out.println("✅ [ProductService] 조회된 상품 수: " + products.size());
+        System.out.println("[ProductService] 조회된 상품 수: " + products.size());
 
         return products.stream()
                 .map(p -> ProductDto.fromEntity(p, baseUrl))
@@ -44,7 +44,7 @@ public class ProductService {
 
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다. ID: " + id));
-        return ProductDto.fromEntity(p, baseUrl); // ✅ baseUrl 전달
+        return ProductDto.fromEntity(p, baseUrl); // baseUrl 전달
     }
 
     /** 상품명 검색 */

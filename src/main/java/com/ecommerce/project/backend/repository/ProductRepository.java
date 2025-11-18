@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
@@ -38,5 +39,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // is_show가 true(1)인 상품만 조회
     @Query("SELECT p FROM Product p WHERE p.isShow = true")
     List<Product> findAllVisibleProducts();
+
+    @Query("SELECT p FROM Product p LEFT JOIN FETCH p.images WHERE p.productId = :id")
+    Optional<Product> findProductWithImages(@Param("id") Long id);
 
 }
