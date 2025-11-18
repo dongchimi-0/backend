@@ -4,6 +4,7 @@ import com.ecommerce.project.backend.domain.Member;
 import com.ecommerce.project.backend.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.servlet.http.HttpSession;
@@ -12,7 +13,7 @@ import java.util.Optional;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class LoginController {
 
     private final MemberRepository memberRepository;
@@ -22,7 +23,6 @@ public class LoginController {
         String email = request.getEmail();
         String pw = request.getPassword();
 
-        //  1. DB에 사용자 존재 여부 확인
         Optional<Member> memberOpt = memberRepository.findByEmail(email);
         if (memberOpt.isEmpty()) {
             return ResponseEntity.status(404).body("존재하지 않는 사용자입니다.");
@@ -30,12 +30,13 @@ public class LoginController {
 
         Member member = memberOpt.get();
 
-        //  2. 비밀번호 검증
-        if (!member.getPassword().equals(pw)) {
+        // ✅ 비밀번호 검증
+        BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+        if (!encoder.matches(pw, member.getPassword())) {
             return ResponseEntity.status(401).body("비밀번호가 일치하지 않습니다.");
         }
 
-        //  3. 세션에 로그인 정보 저장
+        // ✅ 로그인 성공 시 세션 저장
         session.setAttribute("user", member.getEmail());
         return ResponseEntity.ok("로그인 성공: " + member.getEmail());
     }

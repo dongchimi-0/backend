@@ -26,6 +26,9 @@ spring:
 server:
   port: 8080
   address: 0.0.0.0
+  servlet:
+    session:
+      timeout: 5m
 
 musinsa:
   image-base-url: ${MUSINSA_IMAGE_BASE_URL}

@@ -27,11 +27,16 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     // 가격 범위 조회
     List<Product> findBySellPriceBetween(BigDecimal minPrice, BigDecimal maxPrice);
 
-    // ✅ 카테고리 코드로 상품 조회 (category_link 조인)
+    // 카테고리 코드로 상품 조회 (category_link 조인)
     @Query("""
         SELECT p FROM Product p
         JOIN p.categoryLinks cl
         WHERE cl.categoryCode = :code
     """)
     List<Product> findByCategoryCode(@Param("code") String code);
+
+    // is_show가 true(1)인 상품만 조회
+    @Query("SELECT p FROM Product p WHERE p.isShow = true")
+    List<Product> findAllVisibleProducts();
+
 }

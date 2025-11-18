@@ -24,9 +24,17 @@ public class ProductService {
     /** 전체 상품 (노출 중인 상품만) */
     public List<ProductDto> getAllVisibleProducts() {
         String baseUrl = musinsaConfig.getImageBaseUrl();
+        List<Product> products = productRepository.findAllVisibleProducts();
 
-        return productRepository.findByIsShowTrue().stream()
-                .map(p -> ProductDto.fromEntity(p, baseUrl)) // ✅ baseUrl 전달
+        if (products == null || products.isEmpty()) {
+            System.out.println("⚠️ [ProductService] 노출 중인 상품이 없습니다.");
+            return List.of();
+        }
+
+        System.out.println("✅ [ProductService] 조회된 상품 수: " + products.size());
+
+        return products.stream()
+                .map(p -> ProductDto.fromEntity(p, baseUrl))
                 .collect(Collectors.toList());
     }
 
@@ -58,4 +66,7 @@ public class ProductService {
                 .map(p -> ProductDto.fromEntity(p, baseUrl))
                 .collect(Collectors.toList());
     }
+
+
+
 }
