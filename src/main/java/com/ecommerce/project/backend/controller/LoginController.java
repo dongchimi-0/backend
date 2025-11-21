@@ -1,7 +1,7 @@
 package com.ecommerce.project.backend.controller;
 
 import com.ecommerce.project.backend.domain.Member;
-import com.ecommerce.project.backend.dto.LoginRequest;
+import com.ecommerce.project.backend.dto.LoginRequestDto;
 import com.ecommerce.project.backend.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -22,27 +22,37 @@ public class LoginController {
     private final MemberRepository memberRepository;
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@RequestBody LoginRequest request, HttpSession session) {
+    public ResponseEntity<?> login(@RequestBody LoginRequestDto request, HttpSession session) {
+
         String email = request.getEmail();
         String pw = request.getPassword();
 
+        System.out.println("\n===== 로그인 요청 =====");
+        System.out.println("입력 이메일: " + email);
+        System.out.println("입력 PW(plain): " + pw);
+
         Optional<Member> memberOpt = memberRepository.findByEmail(email);
+        System.out.println("DB 조회 결과: " + memberOpt);
+
         if (memberOpt.isEmpty()) {
+            System.out.println("⚠ 이메일 존재 X");
             return ResponseEntity.status(404).body("존재하지 않는 사용자입니다.");
         }
 
         Member member = memberOpt.get();
 
-        // 비밀번호 비교
         BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+
+        System.out.println("DB 저장 PW: " + member.getPassword());
+        System.out.println("비밀번호 match 여부: " + encoder.matches(pw, member.getPassword()));
+        System.out.println("유저 role: " + member.getRole());
+
         if (!encoder.matches(pw, member.getPassword())) {
             return ResponseEntity.status(401).body("비밀번호가 일치하지 않습니다.");
         }
 
-        // 🔥 로그인 성공 → 세션 저장
         session.setAttribute("user", member);
 
-        // 프론트에서 사용할 유저 정보 반환(JSON)
         return ResponseEntity.ok(
                 Map.of(
                         "id", member.getId(),

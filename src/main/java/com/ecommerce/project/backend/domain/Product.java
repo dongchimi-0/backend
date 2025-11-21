@@ -119,7 +119,17 @@ public class Product {
 
     //    상품 상세 설명
     public void updateDescription(String description) {
+
         this.description = description;
+    }
+
+    public void setStock(Integer stock) {
+        this.stock = stock;
+    }
+
+    // 품절 상태 변경
+    public void setProductStatus(Integer status) {
+        this.productStatus = status;
     }
 
 }

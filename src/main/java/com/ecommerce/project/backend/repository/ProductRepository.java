@@ -1,6 +1,7 @@
 package com.ecommerce.project.backend.repository;
 
 import com.ecommerce.project.backend.domain.Product;
+import com.ecommerce.project.backend.domain.ProductOption;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -42,5 +43,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
 
     @Query("SELECT p FROM Product p LEFT JOIN FETCH p.images WHERE p.productId = :id")
     Optional<Product> findProductWithImages(@Param("id") Long id);
+
+    // 상품 ID로 옵션 목록 조회
+    List<ProductOption> findByProductId(Long productId);
 
 }

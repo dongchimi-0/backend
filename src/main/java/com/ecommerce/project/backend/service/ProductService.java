@@ -2,24 +2,26 @@ package com.ecommerce.project.backend.service;
 
 import com.ecommerce.project.backend.config.MusinsaConfig;
 import com.ecommerce.project.backend.domain.Product;
+import com.ecommerce.project.backend.domain.ProductOption;
 import com.ecommerce.project.backend.dto.ProductDto;
+import com.ecommerce.project.backend.repository.ProductOptionRepository;
 import com.ecommerce.project.backend.repository.ProductRepository;
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
+@Transactional
 public class ProductService {
 
     private final ProductRepository productRepository;
     private final MusinsaConfig musinsaConfig;
+    private final ProductOptionRepository optionRepository;
 
-    // musinsaConfig도 생성자 주입 받기
-    public ProductService(ProductRepository productRepository, MusinsaConfig musinsaConfig) {
-        this.productRepository = productRepository;
-        this.musinsaConfig = musinsaConfig;
-    }
 
     /** 전체 상품 (노출 중인 상품만) */
     public List<ProductDto> getAllVisibleProducts() {
@@ -65,6 +67,34 @@ public class ProductService {
                 .stream()
                 .map(p -> ProductDto.fromEntity(p, baseUrl))
                 .collect(Collectors.toList());
+    }
+
+    public void updateProductStatus(Long productId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("상품 없음"));
+
+        boolean isOption = product.getIsOption();
+
+        // 단일상품 처리
+        if (!isOption) {
+            product.setProductStatus(product.getStock() <= 0 ? 20 : 10);
+            return;
+        }
+
+        // 옵션상품 처리
+        List<ProductOption> options = optionRepository.findByProduct_ProductId(productId);
+
+        int totalStock = options.stream()
+                .mapToInt(ProductOption::getStock)
+                .sum();
+
+        product.setStock(totalStock);
+
+        boolean allSoldOut = options.stream()
+                .allMatch(o -> o.getStock() <= 0);
+
+        product.setProductStatus(allSoldOut ? 20 : 10);
     }
 
 

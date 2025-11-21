@@ -15,7 +15,7 @@ public class OrderController {
 
     @PostMapping("/create/{memberId}")
     public ResponseEntity<OrderDto> createOrder(@PathVariable Long memberId) {
-        OrderDto order = orderService.createOrder(memberId);
+        OrderDto order = orderService.checkout(memberId);
         return ResponseEntity.ok(order);
     }
 }

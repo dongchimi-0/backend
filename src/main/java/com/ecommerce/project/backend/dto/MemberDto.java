@@ -46,5 +46,6 @@ public class MemberDto {
                 .role(this.role != null ? this.role : "USER")
                 .build();
     }
+
 }
 

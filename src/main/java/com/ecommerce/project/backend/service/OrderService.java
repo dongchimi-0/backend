@@ -19,10 +19,9 @@ import com.ecommerce.project.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.util.*;
-import java.util.stream.Collectors;
-
 
 @Service
 @RequiredArgsConstructor
@@ -30,73 +29,133 @@ import java.util.stream.Collectors;
 public class OrderService {
 
     private final CartRepository cartRepository;
+    private final MemberRepository memberRepository;
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
-    private final StockService stockService;
+    private final ProductOptionRepository productOptionRepository;
+    private final ProductRepository productRepository;
 
-    public OrderDto createOrder(Long memberId) {
-        List<Cart> cartItems = cartRepository.findByMember_Id(memberId);
+    public OrderDto checkout(Long memberId) {
 
-        if (cartItems.isEmpty()) {
-            throw new IllegalArgumentException("장바구니가 비어 있습니다.");
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new RuntimeException("회원 없음"));
+
+        List<Cart> carts = cartRepository.findByMember_Id(memberId);
+        if (carts.isEmpty()) throw new RuntimeException("장바구니 비었습니다.");
+
+        // 1) 총 금액 계산
+        int totalPrice = carts.stream()
+                .mapToInt(c -> c.getProduct().getSellPrice().intValue() * c.getQuantity())
+                .sum();
+
+
+        /* -------------------------------------------
+         * 2) 재고 체크 (추가)
+         * ------------------------------------------- */
+        for (Cart c : carts) {
+            Product p = c.getProduct();
+            ProductOption opt = c.getOption();
+
+            if (opt != null) {  // 옵션 상품
+                if (opt.getStock() < c.getQuantity()) {
+                    throw new RuntimeException("옵션 재고 부족: " + opt.getOptionValue());
+                }
+            } else {            // 단일 상품
+                if (p.getStock() < c.getQuantity()) {
+                    throw new RuntimeException("상품 재고 부족: " + p.getProductName());
+                }
+            }
         }
 
-        BigDecimal totalPrice = cartItems.stream()
-                .map(c -> c.getPrice().multiply(BigDecimal.valueOf(c.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        Order order = Order.builder()
-                .member(cartItems.get(0).getMember())
-                .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8))
-                .totalPrice(totalPrice)
-                .status("ORDERED")
-                .paymentMethod("CARD")
-                .build();
-        orderRepository.save(order);
+        /* -------------------------------------------
+         * 3) 주문 생성 (기존 코드 그대로)
+         * ------------------------------------------- */
+        Order order = orderRepository.save(
+                Order.builder()
+                        .member(member)
+                        .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8))
+                        .paymentMethod("POINT")
+                        .status("PAID")
+                        .totalPrice(BigDecimal.valueOf(totalPrice))
+                        .build()
+        );
 
         List<OrderItemDto> items = new ArrayList<>();
-        for (Cart c : cartItems) {
-            OrderItem orderItem = OrderItem.builder()
-                    .order(order)
-                    .product(c.getProduct())
-                    .option(c.getProductOption())
-                    .quantity(c.getQuantity())
-                    .price(c.getPrice())
-                    .build();
-            orderItemRepository.save(orderItem);
 
-            // 재고 차감
-            stockService.decreaseStock(c.getProduct().getProductId(), c.getQuantity());
 
-            items.add(OrderItemDto.builder()
-                    .productName(c.getProduct().getProductName())
-                    .quantity(c.getQuantity())
-                    .price(c.getPrice())
-                    .subtotal(c.getPrice().multiply(BigDecimal.valueOf(c.getQuantity())))
-                    .build());
+        /* -------------------------------------------
+         * 4) 주문 상세 생성 + 재고 차감 (추가)
+         * ------------------------------------------- */
+        for (Cart c : carts) {
+
+            Product p = c.getProduct();
+            ProductOption opt = c.getOption();
+
+            // 주문 상세 저장 (기존)
+            orderItemRepository.save(
+                    OrderItem.builder()
+                            .order(order)
+                            .product(p)
+                            .option(opt)
+                            .quantity(c.getQuantity())
+                            .price(p.getSellPrice())
+                            .build()
+            );
+
+            // (추가) 재고 차감
+            if (opt != null) {  // 옵션 상품
+                int newStock = opt.getStock() - c.getQuantity();
+                opt.setStock(newStock);
+                productOptionRepository.save(opt);
+
+                // 옵션 전체 재고 합산 → product.stock 업데이트
+                int mergedStock = p.getOptions().stream()
+                        .mapToInt(ProductOption::getStock)
+                        .sum();
+                p.setStock(mergedStock);
+
+            } else {            // 단일 상품
+                p.setStock(p.getStock() - c.getQuantity());
+            }
+
+            // (추가) 품절 처리
+            if (p.getStock() == 0) {
+                p.setProductStatus(20); // 품절
+            }
+
+            productRepository.save(p);
+
+            // OrderItemDto 추가
+            items.add(
+                    OrderItemDto.builder()
+                            .productName(p.getProductName())
+                            .quantity(c.getQuantity())
+                            .price(p.getSellPrice())
+                            .subtotal(p.getSellPrice().multiply(BigDecimal.valueOf(c.getQuantity())))
+                            .build()
+            );
         }
 
-        cartRepository.deleteAll(cartItems);
 
+        /* -------------------------------------------
+         * 5) 장바구니 삭제 (기존)
+         * ------------------------------------------- */
+        cartRepository.deleteAll(carts);
+
+
+        /* -------------------------------------------
+         * 6) OrderDto 반환 (기존)
+         * ------------------------------------------- */
         return OrderDto.builder()
                 .orderNumber(order.getOrderNumber())
                 .totalPrice(order.getTotalPrice())
-                .status(order.getStatus())
                 .paymentMethod(order.getPaymentMethod())
+                .status(order.getStatus())
                 .items(items)
                 .build();
     }
-
-    public List<OrderDto> getOrdersByMember(Long memberId) {
-        List<Order> orders = orderRepository.findByMember_Id(memberId);
-        return orders.stream()
-                .map(o -> OrderDto.builder()
-                        .orderNumber(o.getOrderNumber())
-                        .totalPrice(o.getTotalPrice())
-                        .status(o.getStatus())
-                        .paymentMethod(o.getPaymentMethod())
-                        .build())
-                .collect(Collectors.toList());
-    }
 }
+
+
 
