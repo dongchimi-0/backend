@@ -58,7 +58,7 @@ public class LoginController {
                         "id", member.getId(),
                         "email", member.getEmail(),
                         "name", member.getName(),
-                        "role", member.getRole()
+                        "role", member.getRole().toUpperCase()
                 )
         );
     }
