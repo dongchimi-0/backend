@@ -1,13 +1,16 @@
 package com.ecommerce.project.backend.controller;
 
+import com.ecommerce.project.backend.dto.ProductDetailDto;
 import com.ecommerce.project.backend.dto.ProductDto;
 import com.ecommerce.project.backend.service.ProductService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/products")
@@ -37,8 +40,6 @@ public class ProductController {
         }
     }
 
-
-
     /** 상품명 검색 */
     @GetMapping("/search")
     public List<ProductDto> searchProducts(@RequestParam String keyword) {
@@ -50,4 +51,20 @@ public class ProductController {
     public List<ProductDto> getProductsByCategory(@PathVariable("code") String code) {
         return productService.getProductsByCategoryCode(code);
     }
+
+    @GetMapping("/{productId}")
+    public ResponseEntity<?> getProductDetail(
+            @PathVariable Long productId,
+            HttpSession session
+    ) {
+        Long memberId = (Long) session.getAttribute("memberId");
+
+        ProductDetailDto dto = productService.getProductDetail(productId, memberId);
+
+        return ResponseEntity.ok(dto);
+    }
+
+
+
+
 }

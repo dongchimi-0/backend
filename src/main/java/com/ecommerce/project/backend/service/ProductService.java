@@ -2,13 +2,19 @@ package com.ecommerce.project.backend.service;
 
 import com.ecommerce.project.backend.config.MusinsaConfig;
 import com.ecommerce.project.backend.domain.Product;
+import com.ecommerce.project.backend.domain.ProductLike;
 import com.ecommerce.project.backend.domain.ProductOption;
+import com.ecommerce.project.backend.dto.ProductDetailDto;
 import com.ecommerce.project.backend.dto.ProductDto;
+import com.ecommerce.project.backend.repository.ProductLikeRepository;
 import com.ecommerce.project.backend.repository.ProductOptionRepository;
 import com.ecommerce.project.backend.repository.ProductRepository;
+import jakarta.servlet.http.HttpSession;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +27,7 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final MusinsaConfig musinsaConfig;
     private final ProductOptionRepository optionRepository;
+    private final ProductLikeRepository likeRepository;
 
 
     /** 전체 상품 (노출 중인 상품만) */
@@ -97,6 +104,22 @@ public class ProductService {
         product.setProductStatus(allSoldOut ? 20 : 10);
     }
 
+    public ProductDetailDto getProductDetail(Long productId, Long memberId) {
+
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new RuntimeException("상품 없음"));
+
+        // 좋아요 여부
+        boolean liked = false;
+        if (memberId != null) {
+            liked = likeRepository.existsByMemberIdAndProductId(memberId, productId);
+        }
+
+        // 좋아요 수 COUNT()
+        Long likeCount = likeRepository.countByProductId(productId);
+
+        return ProductDetailDto.from(product, liked, likeCount, musinsaConfig.getImageBaseUrl());
+    }
 
 
 }
