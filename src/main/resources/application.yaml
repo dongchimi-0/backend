@@ -1,9 +1,9 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://database-1.cj002sycood8.ap-southeast-2.rds.amazonaws.com:3306/team_project?serverTimezone=Asia/Seoul
-    username: dongju
-    password: dong1234!
+    url: jdbc:mysql://${RDS_HOST}:${RDS_PORT}/${RDS_DB}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${RDS_USER}
+    password: ${RDS_PASSWORD}
 
   jpa:
     hibernate:
