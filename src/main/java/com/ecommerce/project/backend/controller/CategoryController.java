@@ -1,6 +1,8 @@
 package com.ecommerce.project.backend.controller;
 
 import com.ecommerce.project.backend.domain.Category;
+import com.ecommerce.project.backend.dto.CategoryDto;
+import com.ecommerce.project.backend.dto.MainCategoryDto;
 import com.ecommerce.project.backend.service.CategoryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -25,4 +27,13 @@ public class CategoryController {
     public Category getCategory(@PathVariable String categoryCode) {
         return categoryService.getCategoryByCode(categoryCode);
     }
+
+    @GetMapping("/main")
+    public List<MainCategoryDto> getMainCategories() {
+        return categoryService.getMainCategories();
+    }
+
+
+
+
 }

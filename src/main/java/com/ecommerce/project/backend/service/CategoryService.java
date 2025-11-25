@@ -3,6 +3,7 @@ package com.ecommerce.project.backend.service;
 import com.ecommerce.project.backend.domain.Category;
 import com.ecommerce.project.backend.dto.CategoryTreeResponseDto;
 import com.ecommerce.project.backend.dto.CategoryDto;
+import com.ecommerce.project.backend.dto.MainCategoryDto;
 import com.ecommerce.project.backend.dto.SubCategoryDto;
 import com.ecommerce.project.backend.repository.CategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -78,4 +79,13 @@ public class CategoryService {
         return categoryRepository.findByCategoryCode(code)
                 .orElseThrow(() -> new IllegalArgumentException("카테고리 없음: " + code));
     }
+
+    public List<MainCategoryDto> getMainCategories() {
+        return categoryRepository.findAll().stream()
+                .filter(c -> c.getCategoryCode().length() == 4)
+                .map(c -> new MainCategoryDto(c.getCategoryCode(), c.getCategoryTitle()))
+                .toList();
+    }
+
+
 }

@@ -25,7 +25,7 @@ public class CartController {
         if (session == null)
             throw new RuntimeException("로그인 필요");
 
-        Member member = (Member) session.getAttribute("user");
+        Member member = (Member) session.getAttribute("loginMember");
 
         if (member == null)
             throw new RuntimeException("로그인 필요");

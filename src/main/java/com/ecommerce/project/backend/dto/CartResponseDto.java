@@ -13,5 +13,6 @@ public class CartResponseDto {
     private List<CartItemDto> items;
     private Integer totalPrice;
     private Integer totalQuantity;
+
 }
 

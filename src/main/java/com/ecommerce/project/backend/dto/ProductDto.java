@@ -39,8 +39,14 @@ public class ProductDto {
     private List<String> subImages;
     private List<ProductOptionDto> options;
 
+    private String categoryCode;
 
     public static ProductDto fromEntity(Product p, String baseUrl) {
+
+        String catCode = null;
+        if (p.getCategoryLinks() != null && !p.getCategoryLinks().isEmpty()) {
+            catCode = p.getCategoryLinks().get(0).getCategoryCode();
+        }
 
         // 메인 이미지 URL
         String fullUrl = null;
@@ -93,6 +99,7 @@ public class ProductDto {
                 .updatedAt(p.getUpdatedAt())
                 .subImages(subImageList)
                 .options(optionList)
+                .categoryCode(catCode)
                 .build();
     }
 

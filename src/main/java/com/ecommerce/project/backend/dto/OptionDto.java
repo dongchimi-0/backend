@@ -1,5 +1,6 @@
 package com.ecommerce.project.backend.dto;
 
+import com.ecommerce.project.backend.domain.ProductOption;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
@@ -13,5 +14,16 @@ public class OptionDto {
     private String optionTitle;
     private String optionValue;
     private String colorCode;
+
+    public static OptionDto fromEntity(ProductOption o) {
+        return OptionDto.builder()
+                .optionId(o.getOptionId())
+                .optionType(o.getOptionType())
+                .optionTitle(o.getOptionTitle())
+                .optionValue(o.getOptionValue())
+                .colorCode(o.getColorCode())
+                .build();
+    }
+
 }
 
