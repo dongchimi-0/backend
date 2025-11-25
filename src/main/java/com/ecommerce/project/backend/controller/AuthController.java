@@ -16,7 +16,6 @@ import jakarta.servlet.http.HttpSession;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
-@CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class AuthController {
 
     private final MemberRepository memberRepository;
