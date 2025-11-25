@@ -13,6 +13,8 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
@@ -41,7 +43,10 @@ public class AuthController {
         HttpSession session = request.getSession(true);
         session.setAttribute("loginMember", member);
 
-        return ResponseEntity.ok("OK");
+        return ResponseEntity.ok(
+                Map.of("status", "OK")
+        );
+
     }
 
 

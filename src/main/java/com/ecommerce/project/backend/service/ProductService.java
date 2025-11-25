@@ -3,12 +3,19 @@ package com.ecommerce.project.backend.service;
 import com.ecommerce.project.backend.config.MusinsaConfig;
 import com.ecommerce.project.backend.domain.Product;
 import com.ecommerce.project.backend.domain.ProductOption;
+import com.ecommerce.project.backend.domain.CategoryLink;
+import com.ecommerce.project.backend.dto.OptionDto;
+import com.ecommerce.project.backend.dto.ProductDetailResponseDto;
 import com.ecommerce.project.backend.dto.ProductDto;
+import com.ecommerce.project.backend.repository.ProductImageRepository;
 import com.ecommerce.project.backend.repository.ProductOptionRepository;
 import com.ecommerce.project.backend.repository.ProductRepository;
+import com.ecommerce.project.backend.repository.CategoryLinkRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -21,6 +28,11 @@ public class ProductService {
     private final ProductRepository productRepository;
     private final MusinsaConfig musinsaConfig;
     private final ProductOptionRepository optionRepository;
+    private final CategoryLinkRepository categoryLinkRepository;   // ⭐ 추가됨!
+    private final ProductImageRepository productImageRepository;
+    @Autowired
+    private final CategoryTreeService categoryTreeService;
+
 
 
     /** 전체 상품 (노출 중인 상품만) */
@@ -40,14 +52,16 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    /** 단일 상품 조회 */
+
+    /** 기존 단일상품 조회 (리스트용) */
     public ProductDto getProductById(Long id) {
         String baseUrl = musinsaConfig.getImageBaseUrl();
 
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 상품입니다. ID: " + id));
-        return ProductDto.fromEntity(p, baseUrl); // baseUrl 전달
+        return ProductDto.fromEntity(p, baseUrl);
     }
+
 
     /** 상품명 검색 */
     public List<ProductDto> searchProductsByName(String keyword) {
@@ -59,6 +73,7 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+
     /** 카테고리 코드별 조회 */
     public List<ProductDto> getProductsByCategoryCode(String categoryCode) {
         String baseUrl = musinsaConfig.getImageBaseUrl();
@@ -69,6 +84,8 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+
+    /** 상품 상태 업데이트 */
     public void updateProductStatus(Long productId) {
 
         Product product = productRepository.findById(productId)
@@ -98,5 +115,66 @@ public class ProductService {
     }
 
 
+    /** ⭐ 상세 상품 조회 (카테고리 + 옵션 포함) */
+    public ProductDetailResponseDto getProductDetail(Long productId) {
+
+        String baseUrl = musinsaConfig.getImageBaseUrl();
+
+        // 1) 상품
+        Product p = productRepository.findById(productId)
+                .orElseThrow(() -> new IllegalArgumentException("상품 없음: " + productId));
+
+        // 2) 옵션 DTO 변환
+        List<ProductOption> options = optionRepository.findByProduct_ProductId(productId);
+
+        List<OptionDto> optionDtos = options.stream()
+                .map(o -> OptionDto.builder()
+                        .optionId(o.getOptionId())
+                        .optionType(o.getOptionType())
+                        .optionTitle(o.getOptionTitle())
+                        .optionValue(o.getOptionValue())
+                        .colorCode(o.getColorCode())
+                        .build()
+                )
+                .collect(Collectors.toList());
+
+        // 3) 카테고리 조회
+        List<String> categoryCodes = categoryLinkRepository
+                .findByProduct_ProductId(productId)
+                .stream()
+                .map(CategoryLink::getCategoryCode)
+                .collect(Collectors.toList());
+
+        String categoryPath = null;
+        if (!categoryCodes.isEmpty()) {
+            categoryPath = categoryTreeService.getCategoryPath(categoryCodes.get(0));
+        }
+
+        // product_image 테이블에서 서브 이미지 조회
+        List<String> subImages = productImageRepository
+                .findByProduct_ProductIdOrderBySortOrderAsc(productId)
+                .stream()
+                .map(img -> img.getImageUrl())
+                .collect(Collectors.toList());
+
+
+        // 4) 응답 DTO 생성
+        return ProductDetailResponseDto.builder()
+                .productId(p.getProductId())
+                .productName(p.getProductName())
+                .description(p.getDescription())
+                .consumerPrice(p.getConsumerPrice())
+                .sellPrice(p.getSellPrice())
+                .stock(p.getStock())
+                .isOption(p.getIsOption())
+                .mainImg(p.getMainImg())
+                .subImages(subImages)
+                .productStatus(p.getProductStatus())
+                .isShow(p.getIsShow())
+                .categoryPath(categoryPath)
+                .categories(categoryCodes)
+                .options(optionDtos)
+                .build();
+    }
 
 }

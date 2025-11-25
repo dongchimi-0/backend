@@ -1,5 +1,6 @@
 package com.ecommerce.project.backend.controller;
 
+import com.ecommerce.project.backend.dto.ProductDetailResponseDto;
 import com.ecommerce.project.backend.dto.ProductDto;
 import com.ecommerce.project.backend.service.ProductService;
 import lombok.RequiredArgsConstructor;
@@ -8,11 +9,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
-// 배포시 주소 주의
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
 public class ProductController {
 
@@ -24,7 +23,7 @@ public class ProductController {
         return productService.getAllVisibleProducts();
     }
 
-    /** 단일 상품 상세 조회 */
+    /** 기본 정보 (리스트·관리자 페이지에서 사용) */
     @GetMapping("/{id}")
     public ResponseEntity<?> getProductById(@PathVariable Long id) {
         try {
@@ -32,12 +31,14 @@ public class ProductController {
             return ResponseEntity.ok(product);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("서버 오류가 발생했습니다.");
         }
     }
 
-
+    /** 상세 정보 (옵션 + 카테고리 포함) */
+    @GetMapping("/{id}/detail")
+    public ResponseEntity<ProductDetailResponseDto> getProductDetail(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.getProductDetail(id));
+    }
 
     /** 상품명 검색 */
     @GetMapping("/search")
