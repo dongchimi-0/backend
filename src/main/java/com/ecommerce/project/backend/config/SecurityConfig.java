@@ -49,7 +49,8 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.addAllowedOrigin("http://localhost:3000");  // 로컬 개발용
-        config.addAllowedOrigin("https://frontend-green-one-32.vercel.app");  // Vercel 배포 프론트 허용
+        config.addAllowedOrigin("https://frontend-green-one-32.vercel.app");  // 커스텀 도메인 연결용
+        config.addAllowedOrigin("https://frontend-bes01bkz1-limyuhaas-projects.vercel.app");  // Vercel 배포 프론트 허용
 
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
