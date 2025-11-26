@@ -28,19 +28,16 @@ public class ProductLikeController {
             return ResponseEntity.status(401).body("로그인 필요");
         }
 
-        Long memberId = loginMember.getId();
-        boolean liked = likeService.toggleLike(memberId, productId);
-
+        boolean liked = likeService.toggleLike(loginMember.getId(), productId);
         return ResponseEntity.ok(liked);
     }
 
     @GetMapping("/my")
     public ResponseEntity<?> getMyLikes(HttpSession session) {
-        Member loginMember = (Member) session.getAttribute("loginMember");
-        if (loginMember == null) return ResponseEntity.status(401).body("로그인 필요");
-        Long memberId = loginMember.getId();
 
-        if (memberId == null) {
+        Member loginMember = (Member) session.getAttribute("loginMember");
+
+        if (loginMember == null || loginMember.getId() == null) {
             return ResponseEntity.status(401).body("로그인 필요");
         }
 
@@ -48,5 +45,3 @@ public class ProductLikeController {
         return ResponseEntity.ok(wishlist);
     }
 }
-
-

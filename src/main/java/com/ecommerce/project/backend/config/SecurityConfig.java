@@ -28,8 +28,6 @@ public class SecurityConfig {
                         .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/login", "/api/logout", "/api/auth/me").permitAll()
-
                         .requestMatchers("/api/auth/login", "/api/auth/logout").permitAll()
                         .requestMatchers("/api/auth/me").permitAll()
 
@@ -48,7 +46,6 @@ public class SecurityConfig {
         // ❌ addAllowedOriginPattern("*") → credentials=true 와 충돌
         // ⭕ 정확한 도메인 명시
         config.setAllowedOrigins(List.of("http://localhost:3000"));
-
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
         config.addAllowedHeader("*");
         config.setAllowCredentials(true); // 세션 쿠키 허용
