@@ -23,6 +23,10 @@ public class ProductDetailResponseDto {
     private Integer productStatus;
     private Boolean isShow;
 
+    private Long likeCount;
+    private Boolean userLiked;
+
+
     // 카테고리 추가
     private List<String> categories;
 

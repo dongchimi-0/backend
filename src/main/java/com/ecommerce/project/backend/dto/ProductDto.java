@@ -26,7 +26,6 @@ public class ProductDto {
     private Boolean isOption;
     private String thumbnailUrl;
 
-
     @JsonProperty("mainImg")
     private String mainImg;
 
@@ -35,11 +34,14 @@ public class ProductDto {
     private Timestamp createdAt;
     private Timestamp updatedAt;
 
-
     private List<String> subImages;
     private List<ProductOptionDto> options;
 
     private String categoryCode;
+
+    // ⭐ 추가 (이 두 줄만 넣으면 끝)
+    private Long likeCount;    // 좋아요 개수
+    private Boolean userLiked; // 로그인 사용자가 좋아요 눌렀는지 여부
 
     public static ProductDto fromEntity(Product p, String baseUrl) {
 
@@ -58,8 +60,7 @@ public class ProductDto {
             }
         }
 
-        // 2) 옵션 리스트 변환 (★ 이 부분이 빠져 있어서 옵션이 안 뜬 것!)
-
+        // 옵션 리스트
         List<ProductOptionDto> optionList = new ArrayList<>();
         if (p.getOptions() != null) {
             optionList = p.getOptions().stream()
@@ -67,24 +68,18 @@ public class ProductDto {
                     .collect(Collectors.toList());
         }
 
-
         // 서브 이미지 URL
         List<String> subImageList = new ArrayList<>();
         if (p.getImages() != null) {
             subImageList = p.getImages().stream()
-                    .map(img -> {
-                        // 앞에 "/" 붙어 있으면 그대로
-                        if (img.getImageUrl().startsWith("/")) {
-                            return baseUrl + img.getImageUrl();
-                        }
-                        // 아니면 "/" 를 붙여준다
-                        return baseUrl + "/" + img.getImageUrl();
-                    })
+                    .map(img -> img.getImageUrl().startsWith("/") ?
+                            baseUrl + img.getImageUrl() :
+                            baseUrl + "/" + img.getImageUrl())
                     .collect(Collectors.toList());
         }
 
         // ----------- DTO 변환 -----------
-        return ProductDto.builder()
+        ProductDto dto = ProductDto.builder()
                 .productId(p.getProductId())
                 .productName(p.getProductName())
                 .description(p.getDescription())
@@ -101,7 +96,9 @@ public class ProductDto {
                 .options(optionList)
                 .categoryCode(catCode)
                 .build();
+
+        // ⭐ 좋아요 정보는 서비스에서 set 해줌
+        return dto;
     }
-
-
 }
+

@@ -5,10 +5,7 @@ import com.ecommerce.project.backend.domain.Product;
 import com.ecommerce.project.backend.dto.OptionDto;
 import com.ecommerce.project.backend.dto.ProductDetailResponseDto;
 import com.ecommerce.project.backend.dto.ProductDto;
-import com.ecommerce.project.backend.repository.ProductImageRepository;
-import com.ecommerce.project.backend.repository.ProductOptionRepository;
-import com.ecommerce.project.backend.repository.ProductRepository;
-import com.ecommerce.project.backend.repository.CategoryLinkRepository;
+import com.ecommerce.project.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,6 +24,9 @@ public class ProductService {
     private final CategoryLinkRepository categoryLinkRepository;
     private final ProductImageRepository productImageRepository;
     private final CategoryTreeService categoryTreeService;
+
+    private final ProductLikeRepository productLikeRepository;
+
 
     /** 전체 상품 조회 */
     public List<ProductDto> getAllVisibleProducts() {
@@ -64,7 +64,7 @@ public class ProductService {
     }
 
     /** 상세 정보 (옵션 + 이미지 + 카테고리) */
-    public ProductDetailResponseDto getProductDetail(Long productId) {
+    public ProductDetailResponseDto getProductDetail(Long productId, Long memberId) {
 
         String baseUrl = musinsaConfig.getImageBaseUrl();
 
@@ -85,17 +85,21 @@ public class ProductService {
                 .map(img -> img.getImageUrl())
                 .collect(Collectors.toList());
 
-        // 카테고리 코드 목록
+        // 카테고리 코드
         List<String> codes = categoryLinkRepository.findByProduct_ProductId(productId)
                 .stream()
                 .map(c -> c.getCategoryCode())
                 .collect(Collectors.toList());
 
-        // 카테고리 경로 생성
+        // 카테고리 경로
         String categoryPath = null;
         if (!codes.isEmpty()) {
             categoryPath = categoryTreeService.getCategoryPath(codes.get(0));
         }
+
+        // ⭐ 추가: 좋아요 정보
+        Long likeCount = productLikeRepository.countByProductId(productId);
+        boolean userLiked = productLikeRepository.existsByMemberIdAndProductId(memberId, productId);
 
         return ProductDetailResponseDto.builder()
                 .productId(p.getProductId())
@@ -112,6 +116,10 @@ public class ProductService {
                 .categoryPath(categoryPath)
                 .categories(codes)
                 .options(options)
+                // ⭐ 여기 두 개 추가
+                .likeCount(likeCount)
+                .userLiked(userLiked)
                 .build();
     }
+
 }

@@ -3,6 +3,7 @@ package com.ecommerce.project.backend.controller;
 import com.ecommerce.project.backend.dto.ProductDto;
 import com.ecommerce.project.backend.dto.ProductDetailResponseDto;
 import com.ecommerce.project.backend.service.ProductService;
+import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -30,10 +31,17 @@ public class ProductController {
 
     /** 상세 정보(카테고리 경로 + 옵션 + 이미지) */
     @GetMapping("/{id}/detail")
-    public ResponseEntity<?> getProductDetail(@PathVariable Long id) {
-        ProductDetailResponseDto dto = productService.getProductDetail(id);
+    public ResponseEntity<?> getProductDetail(
+            @PathVariable Long id,
+            HttpSession session) {
+
+        Long memberId = (Long) session.getAttribute("memberId");
+
+        ProductDetailResponseDto dto = productService.getProductDetail(id, memberId);
+
         return ResponseEntity.ok(dto);
     }
+
 
     /** 검색 */
     @GetMapping("/search")

@@ -18,12 +18,10 @@ public class CartController {
 
     private final CartService cartService;
 
-    /** 세션에서 로그인 사용자 꺼내기 */
+    /** 로그인 유저 조회 공통 메서드 */
     private Member getLoginMember(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
-
-        if (session == null)
-            throw new RuntimeException("로그인 필요");
+        if (session == null) throw new RuntimeException("로그인 필요");
 
         Member member = (Member) session.getAttribute("loginMember");
 
@@ -46,10 +44,6 @@ public class CartController {
                                        @RequestBody CartAddRequestDto req) {
 
         Member member = getLoginMember(request);
-
-        System.out.println("받은 데이터 = productId=" + req.getProductId()
-                + ", optionId=" + req.getOptionId()
-                + ", quantity=" + req.getQuantity());
 
         cartService.addToCart(member.getId(), req);
         return ResponseEntity.ok().build();
@@ -88,3 +82,4 @@ public class CartController {
         return ResponseEntity.ok().build();
     }
 }
+
