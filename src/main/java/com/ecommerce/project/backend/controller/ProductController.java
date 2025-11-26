@@ -17,9 +17,15 @@ public class ProductController {
 
     private final ProductService productService;
 
-    /** 전체 상품 리스트 */
+    /** 전체 + 카테고리별 상품 조회 */
     @GetMapping
-    public List<ProductDto> getAllVisibleProducts() {
+    public List<ProductDto> getProducts(
+            @RequestParam(required = false) String category
+    ) {
+        if (category != null && !category.isEmpty()) {
+            return productService.getProductsByCategoryCode(category);
+        }
+
         return productService.getAllVisibleProducts();
     }
 
@@ -54,4 +60,8 @@ public class ProductController {
     public List<ProductDto> getProductsByCategory(@PathVariable String code) {
         return productService.getProductsByCategoryCode(code);
     }
+
+
+
+
 }

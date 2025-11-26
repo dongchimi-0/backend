@@ -28,7 +28,9 @@ public class ProductLikeController {
             return ResponseEntity.status(401).body("로그인 필요");
         }
 
-        boolean liked = likeService.toggleLike(loginMember.getId(), productId);
+        Long memberId = loginMember.getId();
+        boolean liked = likeService.toggleLike(memberId, productId);
+
         return ResponseEntity.ok(liked);
     }
 

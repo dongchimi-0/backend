@@ -35,7 +35,7 @@ public class Cart {
 
     /** 옵션 상품일 때 옵션ID 저장 */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "option_value")
+    @JoinColumn(name = "option_id")
     private ProductOption option;
 
     @Column(nullable = false)

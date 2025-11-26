@@ -33,7 +33,7 @@ server:
   address: 0.0.0.0
   servlet:
     session:
-      timeout: 5m
+      timeout: 3m
 
 musinsa:
   image-base-url: ${MUSINSA_IMAGE_BASE_URL}
