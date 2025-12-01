@@ -64,9 +64,7 @@ public class ProductService {
     }
 
     /** 상세 정보 (옵션 + 이미지 + 카테고리) */
-    /** 상세 정보 (옵션 + 이미지 + 카테고리) */
     public ProductDetailResponseDto getProductDetail(Long productId, Long memberId) {
-
         String baseUrl = musinsaConfig.getImageBaseUrl();
 
         // 상품
@@ -102,8 +100,12 @@ public class ProductService {
 
         // 좋아요
         Long likeCount = productLikeRepository.countByProductId(productId);
-        boolean userLiked = productLikeRepository.existsByMemberIdAndProductId(memberId, productId);
 
+        // 로그인 안 한 경우 userLiked는 항상 false
+        boolean userLiked = false;
+        if (memberId != null) {
+            userLiked = productLikeRepository.existsByMemberIdAndProductId(memberId, productId);
+        }
         return ProductDetailResponseDto.builder()
                 .productId(p.getProductId())
                 .productName(p.getProductName())

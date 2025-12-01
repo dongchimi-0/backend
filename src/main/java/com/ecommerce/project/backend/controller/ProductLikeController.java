@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -24,15 +25,20 @@ public class ProductLikeController {
 
         Member loginMember = (Member) session.getAttribute("loginMember");
 
-        if (loginMember == null || loginMember.getId() == null) {
+        if (loginMember == null) {
             return ResponseEntity.status(401).body("로그인 필요");
         }
 
         Long memberId = loginMember.getId();
         boolean liked = likeService.toggleLike(memberId, productId);
+        Long likes = likeService.countLikes(productId);
 
-        return ResponseEntity.ok(liked);
+        return ResponseEntity.ok(Map.of(
+                "liked", liked,
+                "likes", likes
+        ));
     }
+
 
     @GetMapping("/my")
     public ResponseEntity<?> getMyLikes(HttpSession session) {

@@ -1,5 +1,6 @@
 package com.ecommerce.project.backend.controller;
 
+import com.ecommerce.project.backend.domain.Member;
 import com.ecommerce.project.backend.dto.ProductDto;
 import com.ecommerce.project.backend.dto.ProductDetailResponseDto;
 import com.ecommerce.project.backend.service.ProductService;
@@ -41,7 +42,8 @@ public class ProductController {
             @PathVariable Long id,
             HttpSession session) {
 
-        Long memberId = (Long) session.getAttribute("memberId");
+        Member loginMember = (Member) session.getAttribute("loginMember");
+        Long memberId = (loginMember != null) ? loginMember.getId() : null;
 
         ProductDetailResponseDto dto = productService.getProductDetail(id, memberId);
 

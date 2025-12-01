@@ -40,6 +40,10 @@ public class ProductLikeService {
         return true; // 좋아요 추가
     }
 
+    public Long countLikes(Long productId) {
+        return likeRepository.countByProductId(productId);
+    }
+
     public List<ProductDto> getMyLikeProducts(Long memberId) {
         String baseUrl = musinsaConfig.getImageBaseUrl();
 
