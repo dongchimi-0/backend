@@ -18,21 +18,20 @@ public class CartController {
 
     private final CartService cartService;
 
-    /** 세션에서 로그인 사용자 꺼내기 (안전한 버전) */
-    private Member getLoginMember(HttpServletRequest request) {
+    /** 세션에서 로그인한 사용자 ID 꺼내기 */
+    private Long getLoginMemberId(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
 
         if (session == null) {
             throw new IllegalStateException("NO_SESSION");
         }
 
-        Member member = (Member) session.getAttribute("loginMember");
-
-        if (member == null) {
+        Long memberId = (Long) session.getAttribute("loginMemberId");
+        if (memberId == null) {
             throw new IllegalStateException("NO_USER");
         }
 
-        return member;
+        return memberId;
     }
 
     /** 공통 예외 처리 */
@@ -52,8 +51,8 @@ public class CartController {
     @GetMapping
     public ResponseEntity<?> getCart(HttpServletRequest request) {
         try {
-            Member member = getLoginMember(request);
-            return ResponseEntity.ok(cartService.getCart(member.getId()));
+            Long memberId = getLoginMemberId(request);
+            return ResponseEntity.ok(cartService.getCart(memberId));
         } catch (IllegalStateException e) {
             return ResponseEntity.status(401).body("NO_SESSION");
         }
@@ -65,8 +64,8 @@ public class CartController {
                                        @RequestBody CartAddRequestDto req) {
 
         return handleAuth(() -> {
-            Member member = getLoginMember(request);
-            cartService.addToCart(member.getId(), req); // addToCart 호출
+            Long memberId = getLoginMemberId(request);
+            cartService.addToCart(memberId, req); // addToCart 호출
         });
     }
 
@@ -76,8 +75,8 @@ public class CartController {
                                             @RequestBody CartUpdateQuantityDto req) {
 
         return handleAuth(() -> {
-            Member member = getLoginMember(request);
-            cartService.updateQuantity(member.getId(), req.getCartId(), req.getQuantity()); // updateQuantity 호출
+            Long memberId = getLoginMemberId(request);
+            cartService.updateQuantity(memberId, req.getCartId(), req.getQuantity()); // updateQuantity 호출
         });
     }
 
@@ -87,8 +86,8 @@ public class CartController {
                                           @RequestBody CartChangeOptionDto req) {
 
         return handleAuth(() -> {
-            Member member = getLoginMember(request);
-            cartService.changeOption(member.getId(), req.getCartId(), req.getNewOptionValue()); // changeOption 호출
+            Long memberId = getLoginMemberId(request);
+            cartService.changeOption(memberId, req.getCartId(), req.getNewOptionValue()); // changeOption 호출
         });
     }
 
@@ -98,25 +97,20 @@ public class CartController {
                                     @PathVariable Long cartId) {
 
         return handleAuth(() -> {
-            Member member = getLoginMember(request);
-            cartService.delete(cartId, member.getId()); // delete 호출
+            Long memberId = getLoginMemberId(request);
+            cartService.delete(cartId, memberId); // delete 호출
         });
     }
 
     @DeleteMapping("")
     public ResponseEntity<?> clearCart(HttpSession session) {
 
-        Object loginObj = session.getAttribute("loginMember");
+        Long memberId = (Long) session.getAttribute("loginMemberId");
 
-        if (loginObj == null) {
-            // 비회원 — 세션ID 기반 삭제
-            String sessionId = session.getId();
-            cartService.clearCartBySessionId(sessionId);
+        if (memberId == null) {
+            // 비회원은 세션ID로 삭제
+            cartService.clearCartBySessionId(session.getId());
         } else {
-            // 회원 — Member 객체에서 ID 꺼내서 삭제
-            Member loginMember = (Member) loginObj;
-            Long memberId = loginMember.getId();
-
             cartService.clearCartByMemberId(memberId);
         }
 

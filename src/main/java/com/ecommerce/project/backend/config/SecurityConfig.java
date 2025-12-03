@@ -53,16 +53,25 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // ❌ addAllowedOriginPattern("*") → credentials=true 와 충돌
-        // ⭕ 정확한 도메인 명시
-        config.setAllowedOrigins(List.of("http://localhost:3000"));  // 로컬 개발용
-        config.addAllowedOriginPattern("https://frontend-green-one-32.vercel.app");  // 커스텀 도메인 연결용
-        config.addAllowedOriginPattern("https://frontend-bes01bkz1-limyuhaas-projects.vercel.app");  // Vercel 배포 프론트 허용
+//        // ❌ addAllowedOriginPattern("*") → credentials=true 와 충돌
+//        // ⭕ 정확한 도메인 명시
+//        config.setAllowedOrigins(List.of("http://localhost:3000"));  // 로컬 개발용
+//        config.addAllowedOriginPattern("https://frontend-green-one-32.vercel.app");  // 커스텀 도메인 연결용
+//        config.addAllowedOriginPattern("https://frontend-bes01bkz1-limyuhaas-projects.vercel.app");  // Vercel 배포 프론트 허용
+//
+//        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
+//
+//        config.addAllowedHeader("*");
+//        config.setAllowCredentials(true);
 
-        config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS","PATCH"));
+        config.setAllowCredentials(true);
+
+        // 🔥 로컬 개발 환경 + 배포 환경 모두 패턴 기반으로 허용
+        config.addAllowedOriginPattern("http://localhost:*");
+        config.addAllowedOriginPattern("https://*.vercel.app");
 
         config.addAllowedHeader("*");
-        config.setAllowCredentials(true);
+        config.addAllowedMethod("*");
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

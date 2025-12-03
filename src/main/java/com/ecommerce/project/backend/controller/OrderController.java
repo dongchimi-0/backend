@@ -19,7 +19,7 @@ public class OrderController {
     private final OrderService orderService;
 
     @PostMapping("/create")
-    public ResponseEntity<OrderDto> createOrder(
+    public ResponseEntity<?> createOrder(
             @RequestBody Map<String, Object> data,
             HttpServletRequest request
     ) {
@@ -27,12 +27,12 @@ public class OrderController {
         HttpSession session = request.getSession(false);
         if (session == null) return ResponseEntity.status(401).build();
 
-        Member loginMember = (Member) session.getAttribute("loginMember");
-        if (loginMember == null) return ResponseEntity.status(401).build();
+        Long memberId = (Long) session.getAttribute("loginMemberId");
+        if (memberId == null) return ResponseEntity.status(401).body("NOT_LOGIN");
 
         Long addressId = Long.valueOf(data.get("addressId").toString());
 
-        OrderDto order = orderService.checkout(loginMember.getId(), addressId);
+        OrderDto order = orderService.checkout(memberId, addressId);
 
         return ResponseEntity.ok(order);
     }
@@ -40,12 +40,10 @@ public class OrderController {
     @GetMapping("/history")
     public ResponseEntity<?> getOrderHistory(HttpSession session) {
 
-        Member member = (Member) session.getAttribute("loginMember");
-        if (member == null) {
+        Long memberId = (Long) session.getAttribute("loginMemberId");
+        if (memberId == null) {
             return ResponseEntity.status(401).body("NOT_LOGIN");
         }
-
-        Long memberId = member.getId(); // Member → memberId 변환
 
         return ResponseEntity.ok(orderService.getOrderHistory(memberId));
     }

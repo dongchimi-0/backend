@@ -42,11 +42,11 @@ public class ProductController {
             @PathVariable Long id,
             HttpSession session) {
 
-        Member loginMember = (Member) session.getAttribute("loginMember");
-        Long memberId = (loginMember != null) ? loginMember.getId() : null;
+        Long memberId = (session != null)
+                ? (Long) session.getAttribute("loginMemberId")
+                : null;
 
         ProductDetailResponseDto dto = productService.getProductDetail(id, memberId);
-
         return ResponseEntity.ok(dto);
     }
 

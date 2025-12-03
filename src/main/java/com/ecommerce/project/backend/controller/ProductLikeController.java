@@ -23,13 +23,12 @@ public class ProductLikeController {
             @PathVariable Long productId,
             HttpSession session) {
 
-        Member loginMember = (Member) session.getAttribute("loginMember");
+        Long memberId = (Long) session.getAttribute("loginMemberId");
 
-        if (loginMember == null) {
+        if (memberId == null) {
             return ResponseEntity.status(401).body("로그인 필요");
         }
 
-        Long memberId = loginMember.getId();
         boolean liked = likeService.toggleLike(memberId, productId);
         Long likes = likeService.countLikes(productId);
 
@@ -43,13 +42,13 @@ public class ProductLikeController {
     @GetMapping("/my")
     public ResponseEntity<?> getMyLikes(HttpSession session) {
 
-        Member loginMember = (Member) session.getAttribute("loginMember");
+        Long memberId = (Long) session.getAttribute("loginMemberId");
 
-        if (loginMember == null || loginMember.getId() == null) {
+        if (memberId == null) {
             return ResponseEntity.status(401).body("로그인 필요");
         }
 
-        List<ProductDto> wishlist = likeService.getMyLikeProducts(loginMember.getId());
+        List<ProductDto> wishlist = likeService.getMyLikeProducts(memberId);
         return ResponseEntity.ok(wishlist);
     }
 }
