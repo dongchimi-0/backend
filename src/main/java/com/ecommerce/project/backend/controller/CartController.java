@@ -102,5 +102,27 @@ public class CartController {
             cartService.delete(cartId, member.getId());
         });
     }
+
+    @DeleteMapping("")
+    public ResponseEntity<?> clearCart(HttpSession session) {
+
+        Object loginObj = session.getAttribute("loginMember");
+
+        if (loginObj == null) {
+            // 비회원 — 세션ID 기반 삭제
+            String sessionId = session.getId();
+            cartService.clearCartBySessionId(sessionId);
+        } else {
+            // 회원 — Member 객체에서 ID 꺼내서 삭제
+            Member loginMember = (Member) loginObj;
+            Long memberId = loginMember.getId();
+
+            cartService.clearCartByMemberId(memberId);
+        }
+
+        return ResponseEntity.ok().body("장바구니 전체 삭제 완료");
+    }
+
+
 }
 

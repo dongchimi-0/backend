@@ -12,6 +12,12 @@ import java.util.Optional;
 
 public interface CartRepository extends JpaRepository<Cart, Long> {
 
+    // 회원 장바구니 전체 삭제
+    void deleteByMemberId(Long memberId);
+
+    // 비회원 장바구니 전체 삭제
+    void deleteBySessionId(String sessionId);
+
     List<Cart> findByMember_Id(Long memberId);
 
     Optional<Cart> findByMember_IdAndProduct_ProductIdAndOption_OptionId(
@@ -29,4 +35,5 @@ public interface CartRepository extends JpaRepository<Cart, Long> {
     Optional<Cart> findForUpdate(
             @Param("cartId") Long cartId,
             @Param("memberId") Long memberId);
+
 }

@@ -230,4 +230,15 @@ public class CartService {
 
         cartRepository.delete(cart);
     }
+
+    @Transactional
+    public void clearCartByMemberId(Long memberId) {
+        cartRepository.deleteByMemberId(memberId);
+    }
+
+    @Transactional
+    public void clearCartBySessionId(String sessionId) {
+        cartRepository.deleteBySessionId(sessionId);
+    }
+
 }
