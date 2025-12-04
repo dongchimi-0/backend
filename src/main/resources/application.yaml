@@ -2,15 +2,15 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     # aws-rds mysql 접속 정보
-    url: jdbc:mysql://${RDS_HOST}:${RDS_PORT}/${RDS_DB}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: ${RDS_USER}
-    password: ${RDS_PASSWORD}
+#    url: jdbc:mysql://${RDS_HOST}:${RDS_PORT}/${RDS_DB}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+#    username: ${RDS_USER}
+#    password: ${RDS_PASSWORD}
 
     # Railway 서버에서 제공하는 MySQL 접속 정보
     # 아래 환경변수들은 .env 또는 Railway 환경 변수에 자동으로 설정됨
-#    url: jdbc:mysql://${MYSQLHOST}:${MYSQLPORT}/${MYSQLDATABASE}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-#    username: ${MYSQLUSER}
-#    password: ${MYSQLPASSWORD}
+    url: jdbc:mysql://${MYSQLHOST}:${MYSQLPORT}/${MYSQLDATABASE}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${MYSQLUSER}
+    password: ${MYSQLPASSWORD}
 
   jpa:
     hibernate:

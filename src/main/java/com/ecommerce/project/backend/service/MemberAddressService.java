@@ -59,7 +59,7 @@ public class MemberAddressService {
         MemberAddress addr = addressRepository.findById(addressId)
                 .orElseThrow(() -> new RuntimeException("배송지 없음"));
 
-        if (!addr.getMember().equals(memberId))
+        if (!addr.getMember().getId().equals(memberId))
             throw new RuntimeException("권한 없음");
 
         addressRepository.delete(addr);
@@ -76,7 +76,7 @@ public class MemberAddressService {
         MemberAddress target = addressRepository.findById(addressId)
                 .orElseThrow(() -> new RuntimeException("배송지 없음"));
 
-        if (!target.getMember().equals(memberId))
+        if (!target.getMember().getId().equals(memberId))
             throw new RuntimeException("권한 없음");
 
         target.setIsDefault(true);
