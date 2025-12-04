@@ -132,25 +132,18 @@ public class CartService {
         List<CartItemDto> items = carts.stream().map(cart -> {
 
             Product p = cart.getProduct();
-            boolean isOptionProduct = p.getIsOption();   // tinyint(1) → boolean 가정
+            boolean isOptionProduct = p.getIsOption();
 
-            String optionValue;
-            String optionTitle;
+            // -------------------------------
+            // 옵션 객체 생성
+            // -------------------------------
+            OptionDto optionDto = null;
 
-            if (!isOptionProduct) {
-                // -------- 단품 규칙 --------
-                optionValue = "";
-                optionTitle = "";
-            } else {
-                // -------- 옵션 상품 규칙 --------
-                optionValue = cart.getOptionValue();
+            if (isOptionProduct) {
+                String optionValue = cart.getOptionValue();
 
-                if (optionValue == null || optionValue.isBlank()) {
-                    // 데이터가 잘못된 상태 → 일단 프론트 안 깨지게만
-                    optionValue = "";
-                    optionTitle = "";
-                } else {
-                    // optionValue 에 맞는 optionTitle 찾기 (for-loop 사용)
+                if (optionValue != null && !optionValue.isBlank()) {
+
                     ProductOption matched = null;
                     for (ProductOption o : p.getProductOptions()) {
                         if (optionValue.equals(o.getOptionValue())) {
@@ -159,12 +152,15 @@ public class CartService {
                         }
                     }
 
-                    optionTitle = (matched != null && matched.getOptionTitle() != null)
-                            ? matched.getOptionTitle()
-                            : "";
+                    if (matched != null) {
+                        optionDto = OptionDto.fromEntity(matched);
+                    }
                 }
             }
 
+            // -------------------------------
+            // 이미지 URL 생성
+            // -------------------------------
             String fullImg = null;
             if (p.getMainImg() != null) {
                 if (p.getMainImg().startsWith("/")) {
@@ -174,9 +170,13 @@ public class CartService {
                 }
             }
 
+            // 상품 기본정보
             int price = p.getSellPrice().intValue();
             boolean soldOut = p.getStock() <= 0;
 
+            // -------------------------------
+            // CartItemDto 반환
+            // -------------------------------
             return CartItemDto.builder()
                     .cartId(cart.getCartId())
                     .productId(p.getProductId())
@@ -186,9 +186,9 @@ public class CartService {
                     .price(price)
                     .stock(p.getStock())
                     .soldOut(soldOut)
-                    .optionValue(optionValue)   // 단품: "", 옵션: "블랙"
-                    .optionTitle(optionTitle)   // 단품: "", 옵션: "색상"
+                    .option(optionDto)  // ★ 여기!! option 객체 추가
                     .build();
+
         }).toList();
 
         int totalPrice = items.stream()
@@ -204,6 +204,7 @@ public class CartService {
                 .totalQuantity(totalQty)
                 .build();
     }
+
 
 
     @Transactional
@@ -299,10 +300,43 @@ public class CartService {
      * 장바구니 엔티티(Cart) 하나를 화면으로 내려주는 DTO(CartItemDto) 로 변환
      * ------------------------- */
     private CartItemDto buildCartItemDto(Cart cart, String optionTitle) {
+
         Product product = cart.getProduct();
 
-        String finalOptionTitle = (optionTitle == null) ? "" : optionTitle;
         String optionValue = (cart.getOptionValue() == null) ? "" : cart.getOptionValue();
+        String finalOptionTitle = (optionTitle == null) ? "" : optionTitle;
+
+        OptionDto optionDto;
+
+        if (!product.getIsOption()) {
+            // 단품일 때 option 객체는 null이 아니라 빈 값으로 내려보냄
+            optionDto = OptionDto.builder()
+                    .optionId(null)
+                    .optionType("")
+                    .optionTitle("")
+                    .optionValue("")
+                    .colorCode("")
+                    .sellPrice(product.getSellPrice())
+                    .stock(product.getStock())
+                    .build();
+
+        } else {
+            // 옵션 상품일 때만 productOption 찾기
+            ProductOption matched = product.getProductOptions().stream()
+                    .filter(o -> optionValue.equals(o.getOptionValue()))
+                    .findFirst()
+                    .orElse(null);
+
+            optionDto = OptionDto.builder()
+                    .optionId(matched != null ? matched.getOptionId() : null)
+                    .optionType(matched != null ? matched.getOptionType() : "")
+                    .optionTitle(finalOptionTitle)
+                    .optionValue(optionValue)
+                    .colorCode(matched != null ? matched.getColorCode() : "")
+                    .sellPrice(matched != null ? matched.getSellPrice() : product.getSellPrice())
+                    .stock(matched != null ? matched.getStock() : product.getStock())
+                    .build();
+        }
 
         return CartItemDto.builder()
                 .cartId(cart.getCartId())
@@ -313,9 +347,10 @@ public class CartService {
                 .price(product.getSellPrice().intValue())
                 .stock(product.getStock())
                 .soldOut(product.getStock() <= 0)
-                .optionValue(optionValue)       // 단품이면 "", 옵션상품이면 "블랙" 같은 값
-                .optionTitle(finalOptionTitle)  // 단품이면 "", 옵션상품이면 "색상"
+                .option(optionDto)
                 .build();
     }
+
+
 
 }
