@@ -98,6 +98,12 @@ public class  MemberService {
         return MemberDto.fromEntity(member);
     }
 
+    public Member findById(Long memberId) {
+        return memberRepository.findById(memberId)
+                .orElse(null);
+    }
+
+
 
 }
 

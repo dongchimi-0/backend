@@ -24,4 +24,11 @@ public class CategoryLink {
     // 단순 코드 문자열 (FK 아님)
     @Column(name = "category_code", nullable = false, length = 30)
     private String categoryCode; // 카테고리 코드 (예: 0001, 00010001)
+
+    public CategoryLink(Product product, String categoryCode) {
+        this.product = product;
+        this.categoryCode = categoryCode;
+    }
+
+
 }

@@ -43,6 +43,7 @@ public class ProductDto {
     private Long likeCount;    // 좋아요 개수
     private Boolean userLiked; // 로그인 사용자가 좋아요 눌렀는지 여부
 
+
     // ProductDto 클래스에서 options 필드를 처리하는 코드
     public static ProductDto fromEntity(Product p, String baseUrl) {
 

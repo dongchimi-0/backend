@@ -1,5 +1,6 @@
 package com.ecommerce.project.backend.domain;
 
+import com.ecommerce.project.backend.dto.ProductDto;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
@@ -169,4 +170,37 @@ public class Product {
         // 옵션의 재고가 변경되었을 때 총 재고 업데이트
         updateTotalStockFromOptions();
     }
+
+    public List<ProductImage> getSubImages() {
+        return this.images; // 연결된 이미지 리스트 반환
+    }
+
+    // Product 생성자에서 ProductDto를 받도록 수정
+    public Product(ProductDto dto) {
+        this.productName = dto.getProductName();
+        this.description = dto.getDescription();
+        this.consumerPrice = dto.getConsumerPrice();
+        this.sellPrice = dto.getSellPrice();
+        this.stock = dto.getStock();
+        this.isOption = dto.getIsOption();
+        this.mainImg = dto.getMainImg();
+        this.productStatus = dto.getProductStatus();
+        this.isShow = dto.getIsShow();
+    }
+
+    // ProductDto에서 정보를 받아와 업데이트하는 메서드
+    public void updateProductInfo(ProductDto productDto) {
+        this.productName = productDto.getProductName();
+        this.description = productDto.getDescription();
+        this.consumerPrice = productDto.getConsumerPrice();
+        this.sellPrice = productDto.getSellPrice();
+        this.stock = productDto.getStock();
+        this.isOption = productDto.getIsOption();
+        this.mainImg = productDto.getMainImg();
+        this.productStatus = productDto.getProductStatus();
+        this.isShow = productDto.getIsShow();
+    }
+
+
+
 }

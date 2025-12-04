@@ -33,4 +33,15 @@ public class ProductImage {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
+
+    public ProductImage(String imageUrl, Product product) {
+        this.imageUrl = imageUrl;
+        this.product = product;
+    }
+
+
+    public void setProduct(Product product) {
+        this.product = product;
+    }
+
 }

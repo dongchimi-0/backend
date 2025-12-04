@@ -1,9 +1,11 @@
 package com.ecommerce.project.backend.service;
 
-import com.ecommerce.project.backend.domain.Product;
-import com.ecommerce.project.backend.domain.ProductOption;
-import com.ecommerce.project.backend.repository.ProductOptionRepository;
-import com.ecommerce.project.backend.repository.ProductRepository;
+import com.ecommerce.project.backend.domain.*;
+import com.ecommerce.project.backend.dto.OptionDto;
+import com.ecommerce.project.backend.dto.ProductDto;
+import com.ecommerce.project.backend.dto.ProductImageDto;
+import com.ecommerce.project.backend.dto.ProductOptionDto;
+import com.ecommerce.project.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -18,18 +20,50 @@ public class AdminProductService {
 
     private final ProductRepository productRepository;
     private final ProductOptionRepository productOptionRepository;
+    private final ProductImageRepository productImageRepository;
+    private final CategoryRepository categoryRepository;
+    private final CategoryLinkRepository categoryLinkRepository;
 
     /** 상품 등록 */
-    public Product createProduct(Product product) {
-        if (product.getStock() < 0) {
+    public Product createProduct(ProductDto productDto, String categoryCode) {
+
+        //유효성 검사
+        if (productDto.getStock() < 0) {
             throw new IllegalArgumentException("재고는 음수가 될 수 없습니다.");
         }
-        if (product.getSellPrice().compareTo(product.getConsumerPrice()) > 0) {
+        if (productDto.getSellPrice().compareTo(productDto.getConsumerPrice()) > 0) {
             throw new IllegalArgumentException("판매가는 소비자가보다 높을 수 없습니다.");
         }
 
+        Product product = new Product(productDto);
+
         // 상품을 먼저 저장
         Product savedProduct = productRepository.save(product);
+
+        // 대표 이미지 저장 (mainImg 처리)
+        if (product.getMainImg() != null && !product.getMainImg().isEmpty()) {
+            ProductImage mainImage = ProductImage.builder()
+                    .imageUrl(product.getMainImg())  // mainImg URL을 저장
+                    .sortOrder(1)  // 대표 이미지는 정렬순서 1로 설정
+                    .product(savedProduct)  // 상품과 연결
+                    .build();
+            productImageRepository.save(mainImage);  // 대표 이미지 저장
+        }
+
+        // 상세 이미지 처리 (subImages 처리)
+        if (productDto.getSubImages() != null && !productDto.getSubImages().isEmpty()) {
+            int sortOrder = 2;  // 상세 이미지의 시작 sortOrder 값 (1은 대표 이미지 사용)
+
+            for (String imageUrl : productDto.getSubImages()) {  // subImages가 String의 리스트
+                ProductImage productImage = ProductImage.builder()
+                        .imageUrl(imageUrl)  // imageUrl로 문자열을 전달
+                        .sortOrder(sortOrder++)  // 순서대로 증가
+                        .product(savedProduct)  // 상품과 연결
+                        .build();
+                productImageRepository.save(productImage);  // 이미지 저장
+            }
+        }
+
 
         // 상품이 옵션이 있을 경우 옵션 처리
         if (product.getIsOption() != null && product.getIsOption()) {
@@ -40,27 +74,89 @@ public class AdminProductService {
             });
         }
 
+        // 카테고리 처리
+        Category category = categoryRepository.findByCategoryCode(categoryCode)
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 카테고리입니다."));
+
+        // CategoryLinkDTO를 CategoryLink 엔티티로 변환
+        CategoryLink categoryLink = new CategoryLink(savedProduct, category.getCategoryCode());
+
+        categoryLinkRepository.save(categoryLink);  // 카테고리 링크 저장
+
         return savedProduct;
     }
 
     /** 상품 수정 */
-    public Product updateProduct(Long productId, Product product) {
+    @Transactional
+    public Product updateProduct(Long productId, ProductDto productDto) {
+        // 기존 상품 조회
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. ID: " + productId));
 
         // 상품 정보 수정
-        existingProduct.updateProductInfo(product);
+        existingProduct.updateProductInfo(productDto);
 
         // 기존 옵션 삭제 후 새 옵션 추가
-        if (product.getIsOption() != null && product.getIsOption()) {
-            List<ProductOption> options = product.getOptions();
-            productOptionRepository.deleteAllByProduct_ProductId(productId); // 기존 옵션 삭제
-            options.forEach(option -> {
-                option.setProduct(existingProduct); // 상품에 연결된 옵션 설정
-                productOptionRepository.save(option); // 새 옵션 저장
-            });
+        if (productDto.getIsOption() != null && productDto.getIsOption()) {
+            // 기존 옵션 삭제
+            productOptionRepository.deleteAllByProduct_ProductId(productId);
+
+            // 새 옵션 추가
+            for (OptionDto optionDto : productDto.getOptions()) {
+                // OptionDto에서 값을 추출하여 ProductOptionDto로 변환
+                ProductOptionDto optionDto = ProductOptionDto.builder()
+                        .optionTitle(optionDto.getOptionTitle())
+                        .optionValue(optionDto.getOptionValue())
+                        .stock(optionDto.getStock())
+                        .isShow(optionDto.getIsShow())
+                        .colorCode(optionDto.getColorCode())
+                        .sellPrice(optionDto.getSellPrice())
+                        .consumerPrice(optionDto.getConsumerPrice())
+                        .productId(existingProduct.getProductId())  // 기존 상품과 연결
+                        .build();
+
+                // ProductOptionDto에서 ProductOption 엔티티로 변환
+                ProductOption option = new ProductOption(
+                        optionDto.getOptionTitle(),
+                        optionDto.getOptionValue(),
+                        optionDto.getStock(),
+                        optionDto.getIsShow(),
+                        optionDto.getColorCode(),
+                        optionDto.getSellPrice(),
+                        optionDto.getConsumerPrice(),
+                        existingProduct // 기존 상품과 연결
+                );
+
+                // 상품 옵션 저장
+                productOptionRepository.save(option);
+            }
         }
 
+
+        // 기존 이미지 삭제 후 새 이미지 추가
+        if (productDto.getMainImg() != null && !productDto.getMainImg().isEmpty()) {
+            // 메인 이미지 저장
+            ProductImage mainImage = new ProductImage(productDto.getMainImg(), existingProduct);
+            productImageRepository.save(mainImage);
+        }
+
+        // 서브 이미지 처리 (여러 개의 이미지 추가)
+        if (productDto.getSubImages() != null && !productDto.getSubImages().isEmpty()) {
+            // 기존 서브 이미지 삭제
+            productImageRepository.deleteAllByProduct_ProductId(productId);
+            // 서브 이미지 추가
+            int sortOrder = 2;  // 서브 이미지의 시작 sortOrder 값
+            for (String imageUrl : productDto.getSubImages()) {  // subImages가 String의 리스트
+                ProductImage productImage = ProductImage.builder()
+                        .imageUrl(imageUrl)  // imageUrl로 문자열을 전달
+                        .sortOrder(sortOrder++)  // 순서대로 증가
+                        .product(existingProduct)  // 상품과 연결
+                        .build();
+                productImageRepository.save(productImage);  // 서브 이미지 저장
+            }
+        }
+
+        // 저장된 상품 업데이트
         return productRepository.save(existingProduct);
     }
 
@@ -69,7 +165,8 @@ public class AdminProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. ID: " + productId));
 
-        product.updateSellPrice(newSellPrice); // 엔티티 도메인 메서드 활용
+        // 판매가 수정
+        product.updateSellPrice(newSellPrice);
         productRepository.save(product);
     }
 
@@ -78,7 +175,8 @@ public class AdminProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("상품을 찾을 수 없습니다. ID: " + productId));
 
-        product.updateStock(newStock); // 엔티티 도메인 메서드 활용
+        // 재고 수정
+        product.updateStock(newStock);
         productRepository.save(product);
     }
 
@@ -89,4 +187,6 @@ public class AdminProductService {
         }
         productRepository.deleteById(productId);
     }
+
+
 }

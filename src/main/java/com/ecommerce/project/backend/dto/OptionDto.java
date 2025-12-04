@@ -16,8 +16,10 @@ public class OptionDto {
     private String optionTitle;
     private String optionValue;
     private String colorCode;
+//    private Boolean isShow;
 
     private BigDecimal sellPrice;
+//    private BigDecimal consumerPrice;
     private Integer stock;
 
     public static OptionDto fromEntity(ProductOption o) {
@@ -27,7 +29,9 @@ public class OptionDto {
                 .optionTitle(o.getOptionTitle())
                 .optionValue(o.getOptionValue())
                 .colorCode(o.getColorCode())
+//                .isShow(o.getIsShow())
                 .sellPrice(o.getSellPrice())
+//                .consumerPrice(o.getConsumerPrice())
                 .stock(o.getStock())
 
                 .build();
