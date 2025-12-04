@@ -1,5 +1,7 @@
 package com.ecommerce.project.backend.domain;
 
+import com.ecommerce.project.backend.dto.ProductDto;
+import com.ecommerce.project.backend.dto.ProductOptionDto;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -98,6 +100,37 @@ public class ProductOption {
         this.stock = newStock;
     }
 
+    // 생성자 추가
+//    public ProductOption(
+//    String optionTitle, String optionValue, Integer stock, Boolean isShow,
+//                         String colorCode, BigDecimal sellPrice, BigDecimal consumerPrice,
+//                         Product product, ProductDto dto) {
+//        this.optionTitle = optionTitle;
+//        this.optionValue = optionValue;
+//        this.stock = stock;
+//        this.isShow = isShow;
+//        this.colorCode = colorCode;
+//        this.sellPrice = sellPrice;
+//        this.consumerPrice = consumerPrice;
+//        this.product = product;
+//    }
 
+    // ProductOptionDto를 ProductOption으로 변환하는 생성자 추가
+    public ProductOption(ProductOptionDto optionDto, Product product) {
+        this.optionTitle = optionDto.getOptionTitle();
+        this.optionValue = optionDto.getOptionValue();
+        this.stock = optionDto.getStock();
+        this.isShow = optionDto.getIsShow();
+        this.colorCode = optionDto.getColorCode();
+        this.sellPrice = optionDto.getSellPrice();
+        this.consumerPrice = optionDto.getConsumerPrice();
+        this.product = product; // Product와 연결
+        this.optionType = optionDto.getOptionType();
+    }
+
+    // getIsShow 메서드 추가 (Boolean 타입 반환)
+    public Boolean getIsShow() {
+        return isShow;
+    }
 
 }

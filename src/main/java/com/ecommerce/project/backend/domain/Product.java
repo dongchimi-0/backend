@@ -86,16 +86,16 @@ public class Product {
         this.stock -= quantity;
     }
 
-    /** 단일 상품 재고 수정 (관리자용) */
-    public void updateStock(int newStock) {
-        if (isOption) {
-            throw new IllegalStateException("옵션 상품은 옵션별로 재고를 수정해야 합니다.");
-        }
-        if (newStock < 0) {
-            throw new IllegalArgumentException("재고는 음수가 될 수 없습니다.");
-        }
-        this.stock = newStock;
-    }
+//    /** 단일 상품 재고 수정 (관리자용) */
+//    public void updateStock(int newStock) {
+//        if (isOption) {
+//            throw new IllegalStateException("옵션 상품은 옵션별로 재고를 수정해야 합니다.");
+//        }
+//        if (newStock < 0) {
+//            throw new IllegalArgumentException("재고는 음수가 될 수 없습니다.");
+//        }
+//        this.stock = newStock;
+//    }
 
     /** 옵션 상품 재고 합산 (옵션 상품일 경우 호출) */
     public void updateTotalStockFromOptions() {

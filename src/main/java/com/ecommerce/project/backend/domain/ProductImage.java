@@ -44,4 +44,7 @@ public class ProductImage {
         this.product = product;
     }
 
+    public long getProductId() {
+        return product.getProductId();
+    }
 }

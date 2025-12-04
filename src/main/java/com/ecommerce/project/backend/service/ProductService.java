@@ -28,7 +28,6 @@ public class ProductService {
     private final CategoryTreeService categoryTreeService;
 
     private final ProductLikeRepository productLikeRepository;
-    private final ProductOptionRepository productOptionRepository;
 
 
     /**
@@ -138,7 +137,7 @@ public class ProductService {
                 .build();
     }
 
-    public void updateProductStockAndStatus(Long productId, ) {
+    public void updateProductStockAndStatus(Long productId) {
 
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new IllegalArgumentException("상품 없음"));
