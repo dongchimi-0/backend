@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -45,24 +46,24 @@ public class AdminProductService {
         Category category = categoryRepository.findByCategoryCode(categoryCode)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 카테고리입니다."));
 
-        // 4. 상품 저장
-        Product savedProduct = productRepository.save(product);
-
         // 4. 상품 옵션 처리
-        List<ProductOption> options = new ArrayList<>();
+//        List<ProductOption> options = new ArrayList<>();
+        List<ProductOption> options;
+        AtomicInteger totalStock = new AtomicInteger(0);
+
         if (productDto.getIsOption() != null && productDto.getIsOption()) {
             options = productDto.getOptions().stream()
-                    .map(optionDto -> new ProductOption(optionDto, product))  // DTO -> Entity 변환
+                    .map(optionDto -> {
+                        totalStock.addAndGet(optionDto.getStock());  // AtomicInteger로 값을 더함
+                        return new ProductOption(optionDto, product);  // DTO -> Entity 변환
+                    })
                     .collect(Collectors.toList());
             productOptionRepository.saveAll(options);  // 옵션 일괄 저장
         }
 
-        // 6. 옵션 수량 합산 후 상품 재고(stock) 업데이트
-        savedProduct.updateTotalStockFromOptions();  // 옵션의 재고를 합산하여 상품 재고를 갱신
-
-
-//        // 4. Product 저장
-//        Product savedProduct = productRepository.save(product);
+        // 상품의 총 재고 갱신
+        product.setStock(totalStock.get());  // AtomicInteger의 값을 상품의 stock에 반영
+        Product savedProduct = productRepository.save(product);
 
         // 5. 대표 이미지 저장 (mainImg 처리)
         if (productDto.getMainImg() != null && !productDto.getMainImg().isEmpty()) {
@@ -88,15 +89,6 @@ public class AdminProductService {
                 productImageRepository.save(productImage);  // 이미지 저장
             }
         }
-
-//        // 7. 상품 옵션이 있을 경우 옵션 처리
-//        if (productDto.getIsOption() != null && productDto.getIsOption()) {
-//            List<ProductOption> options = productDto.getOptions().stream()
-//                    .map(optionDto -> new ProductOption(optionDto, savedProduct))  // DTO -> Entity 변환
-//                    .collect(Collectors.toList());
-//            productOptionRepository.saveAll(options);  // 옵션 일괄 저장
-//        }
-
 
         // 8. 카테고리와 상품 연결 (CategoryLink 저장)
         CategoryLink categoryLink = new CategoryLink(savedProduct, category.getCategoryCode());

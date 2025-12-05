@@ -26,7 +26,7 @@ public class ProductOption {
     @Column(name = "option_id")  // PK 명시
     private Long optionId; // 옵션 고유 번호 (PK)
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "product_id", nullable = false)
     @JsonBackReference
     private Product product; // 어떤 상품의 옵션인지 (FK)

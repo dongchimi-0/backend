@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -86,16 +87,11 @@ public class Product {
         this.stock -= quantity;
     }
 
-//    /** 단일 상품 재고 수정 (관리자용) */
-//    public void updateStock(int newStock) {
-//        if (isOption) {
-//            throw new IllegalStateException("옵션 상품은 옵션별로 재고를 수정해야 합니다.");
-//        }
-//        if (newStock < 0) {
-//            throw new IllegalArgumentException("재고는 음수가 될 수 없습니다.");
-//        }
-//        this.stock = newStock;
-//    }
+    @PrePersist
+    @PreUpdate
+    public void setUpdatedAt() {
+        this.updatedAt = Timestamp.valueOf(LocalDateTime.now()); // 현재 시간으로 업데이트
+    }
 
     /** 옵션 상품 재고 합산 (옵션 상품일 경우 호출) */
     public void updateTotalStockFromOptions() {
@@ -107,6 +103,8 @@ public class Product {
 
         this.stock = totalStock;
     }
+
+
 
     /** 판매가 수정 */
     public void updateSellPrice(BigDecimal newSellPrice) {
