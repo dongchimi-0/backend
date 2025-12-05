@@ -1,63 +1,5 @@
 
 package com.ecommerce.project.backend.domain;
-/*
-import jakarta.persistence.*;
-import lombok.*;
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
-
-@Entity
-@Table(name = "order_item")
-@Getter @Setter @Builder
-@NoArgsConstructor @AllArgsConstructor
-public class OrderItem {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "order_item_id")
-    private Long orderItemId;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "product_id", nullable = false)
-    private Product product;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "option_id")
-    private ProductOption option;
-
-    @Column(name = "quantity")
-    private int quantity;
-
-    @Column(name = "price", precision = 10, scale = 2)
-    private BigDecimal price;
-
-    @Column(name = "subtotal", precision = 10, scale = 2)
-    private BigDecimal subtotal;
-
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @PrePersist
-    public void prePersist() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-        subtotal = price.multiply(BigDecimal.valueOf(quantity));
-    }
-
-    @PreUpdate
-    public void preUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
-}
-
-*/
 
 import jakarta.persistence.*;
         import lombok.*;
@@ -98,7 +40,7 @@ public class OrderItem {
     @Column(precision = 10, scale = 2)
     private BigDecimal price;
 
-    @Column(name = "subtotal", insertable = false, updatable = false)
+    @Column(name = "subtotal")
     private BigDecimal subtotal;
 
     // ---------------------------

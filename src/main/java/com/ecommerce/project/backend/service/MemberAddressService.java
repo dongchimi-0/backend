@@ -35,6 +35,7 @@ public class MemberAddressService {
                 .phone(dto.getPhone())
                 .address(dto.getAddress())
                 .detail(dto.getDetail())
+                .zipcode(dto.getZipcode())
                 .isDefault(dto.getIsDefault())
                 .build();
 
@@ -49,6 +50,7 @@ public class MemberAddressService {
                         .phone(addr.getPhone())
                         .address(addr.getAddress())
                         .detail(addr.getDetail())
+                        .zipcode(addr.getZipcode())
                         .isDefault(addr.getIsDefault())
                         .build())
                 .toList();

@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ecommerce.project.backend.dto.PaymentOrderDto;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
@@ -83,9 +85,15 @@ public class OrderService {
         memberRepository.save(member);
 
 
+
         // -------------------------------
         // 5) 주문 생성
         // -------------------------------
+        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        String random = UUID.randomUUID().toString().substring(0, 6);
+        String orderNum = "YDJ-" + date + "-" + random;
+
+
         Order order = orderRepository.save(
                 Order.builder()
                         .member(member)
@@ -94,7 +102,7 @@ public class OrderService {
                         .address(address.getAddress())
                         .addressDetail(address.getDetail())
                         .zipcode(address.getZipcode())
-                        .orderNumber("ORD-" + UUID.randomUUID().toString().substring(0, 8))
+                        .orderNumber(orderNum)
                         .totalPrice(totalPrice)
                         .paymentMethod("POINT")
                         .status("PAID")
