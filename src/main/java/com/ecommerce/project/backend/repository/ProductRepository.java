@@ -2,6 +2,7 @@ package com.ecommerce.project.backend.repository;
 
 import com.ecommerce.project.backend.domain.Product;
 import com.ecommerce.project.backend.domain.ProductOption;
+import com.ecommerce.project.backend.dto.ProductListDto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -13,6 +14,21 @@ import java.util.Optional;
 
 @Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
+
+    // 목록 전용 DTO 조회
+    @Query("""
+        select new com.ecommerce.project.backend.dto.ProductListDto(
+            p.productId,
+            p.productName,
+            p.sellPrice,
+            p.consumerPrice,
+            p.mainImg
+        )
+        from Product p
+        where p.isShow = true
+        order by p.productId asc
+    """)
+    List<ProductListDto> findProductList();
 
     //관리자용 전체 조회
     List<Product> findAll();

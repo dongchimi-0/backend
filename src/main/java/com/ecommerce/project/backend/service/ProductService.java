@@ -3,10 +3,7 @@ package com.ecommerce.project.backend.service;
 import com.ecommerce.project.backend.config.MusinsaConfig;
 import com.ecommerce.project.backend.domain.Product;
 import com.ecommerce.project.backend.domain.ProductOption;
-import com.ecommerce.project.backend.dto.OptionDto;
-import com.ecommerce.project.backend.dto.ProductDetailResponseDto;
-import com.ecommerce.project.backend.dto.ProductDto;
-import com.ecommerce.project.backend.dto.ProductOptionDto;
+import com.ecommerce.project.backend.dto.*;
 import com.ecommerce.project.backend.repository.*;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +38,11 @@ public class ProductService {
                 .map(p -> ProductDto.fromEntity(p, baseUrl))
                 .collect(Collectors.toList());
     }
+
+    public List<ProductListDto> getProductListLite() {
+        return productRepository.findProductList();  // DTO를 직접 반환하는 빠른 쿼리
+    }
+
 
     /**
      * 단일 상품 (기본 정보)

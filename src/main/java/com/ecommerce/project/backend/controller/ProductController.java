@@ -18,6 +18,12 @@ public class ProductController {
 
     private final ProductService productService;
 
+    /** 가벼운 상품 목록 조회 (메인 페이지 최적화 버전) */
+    @GetMapping("/list")
+    public ResponseEntity<?> getProductListLite() {
+        return ResponseEntity.ok(productService.getProductListLite());
+    }
+
     /** 전체 + 카테고리별 상품 조회 */
     @GetMapping
     public List<ProductDto> getProducts(
