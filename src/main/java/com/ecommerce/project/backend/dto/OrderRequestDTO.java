@@ -8,12 +8,15 @@ import java.util.List;
 @Getter
 @Setter
 public class OrderRequestDTO {
-    private String receiverName;
-    private String receiverPhone;
-    private String address;
-    private String addressDetail;
-    private String zipcode;
+    private Long addressId;
 
-    private List<Long> cartIds; // 결제할 카트ID 목록
+    private List<Item> items;
+
+    @Getter @Setter
+    public static class Item {
+        private Long productId;
+        private Integer quantity;
+        private List<String> optionValues;  // ["색상 Ivory"], ["기본"]
+    }
 }
 

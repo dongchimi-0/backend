@@ -2,14 +2,11 @@ package com.ecommerce.project.backend.service;
 
 import com.ecommerce.project.backend.config.MusinsaConfig;
 import com.ecommerce.project.backend.domain.*;
-import com.ecommerce.project.backend.dto.MemberAddressDto;
-import com.ecommerce.project.backend.dto.OrderDto;
-import com.ecommerce.project.backend.dto.OrderItemDto;
+import com.ecommerce.project.backend.dto.*;
 import com.ecommerce.project.backend.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.ecommerce.project.backend.dto.PaymentOrderDto;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -31,69 +28,73 @@ public class OrderService {
     private final MusinsaConfig musinsaConfig;
 
     @Transactional
-    public OrderDto checkout(Long memberId, Long addressId) {
+    public OrderDto checkout(Long memberId, OrderRequestDTO req) {
 
-        String baseUrl = musinsaConfig.getImageBaseUrl();
-
-        // -------------------------------
-        // 1) 회원 & 배송지 조회
-        // -------------------------------
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("회원 없음"));
 
-        MemberAddress address = memberAddressRepository.findById(addressId)
+        MemberAddress address = memberAddressRepository.findById(req.getAddressId())
                 .orElseThrow(() -> new RuntimeException("배송지 없음"));
 
+        // 주문 번호 생성
+        String orderNum = "ORD-" + UUID.randomUUID().toString().substring(0, 8);
 
-        // -------------------------------
-        // 2) 장바구니 조회
-        // -------------------------------
-        List<Cart> carts = cartRepository.findByMember_Id(memberId);
-        if (carts.isEmpty()) throw new RuntimeException("장바구니가 비어 있습니다.");
-
-        BigDecimal totalPrice = BigDecimal.ZERO;
         List<OrderItemDto> itemDtos = new ArrayList<>();
+        BigDecimal totalPrice = BigDecimal.ZERO;
 
+        // 먼저 totalPrice를 계산
+        for (OrderRequestDTO.Item it : req.getItems()) {
 
-        // -------------------------------
-        // 3) 총 결제 금액 계산 + 재고 체크
-        // -------------------------------
-        for (Cart c : carts) {
-            Product p = c.getProduct();
-            ProductOption opt = resolveCartOption(c);
-            int qty = c.getQuantity();
+            Product product = productRepository.findById(it.getProductId())
+                    .orElseThrow(() -> new RuntimeException("상품 없음"));
 
-            BigDecimal unitPrice = (opt != null) ? opt.getSellPrice() : p.getSellPrice();
+            Integer quantity = it.getQuantity();
+            ProductOption option = null;
 
-            if (opt != null && opt.getStock() < qty)
-                throw new RuntimeException("옵션 재고 부족: " + opt.getOptionValue());
+            String displayOptionValue = "기본";
 
-            if (opt == null && p.getStock() < qty)
-                throw new RuntimeException("상품 재고 부족: " + p.getProductName());
+            // 옵션 문자열 매칭
+            if (it.getOptionValues() != null &&
+                    !it.getOptionValues().isEmpty() &&
+                    !it.getOptionValues().get(0).equals("기본")) {
 
-            totalPrice = totalPrice.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
+                String raw = it.getOptionValues().get(0);  // "색상 Ivory"
+                String[] parts = raw.split(" ", 2);
+
+                if (parts.length == 2) {
+                    String title = parts[0].trim();
+                    String value = parts[1].trim();
+
+                    option = product.getProductOptions().stream()
+                            .filter(o ->
+                                    o.getOptionTitle().equalsIgnoreCase(title) &&
+                                            o.getOptionValue().equalsIgnoreCase(value)
+                            )
+                            .findFirst()
+                            .orElseThrow(() -> new RuntimeException("옵션 없음"));
+
+                    displayOptionValue = option.getOptionTitle() + " " + option.getOptionValue();
+                }
+            }
+
+            BigDecimal price = (option != null && option.getSellPrice() != null)
+                    ? option.getSellPrice()
+                    : product.getSellPrice();
+
+            BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
+            totalPrice = totalPrice.add(subtotal);
         }
 
+        // 회원 포인트가 충분한지 체크
+        if (member.getPoint() < totalPrice.intValue()) {
+            throw new RuntimeException("포인트가 부족합니다.");
+        }
 
-        // -------------------------------
-        // 4) 회원 포인트 차감
-        // -------------------------------
-        if (member.getPoint() < totalPrice.intValue())
-            throw new RuntimeException("포인트 부족");
-
+        // 포인트 차감
         member.setPoint(member.getPoint() - totalPrice.intValue());
         memberRepository.save(member);
 
-
-
-        // -------------------------------
-        // 5) 주문 생성
-        // -------------------------------
-        String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String random = UUID.randomUUID().toString().substring(0, 6);
-        String orderNum = "YDJ-" + date + "-" + random;
-
-
+        // totalPrice가 계산된 후 Order INSERT
         Order order = orderRepository.save(
                 Order.builder()
                         .member(member)
@@ -103,104 +104,99 @@ public class OrderService {
                         .addressDetail(address.getDetail())
                         .zipcode(address.getZipcode())
                         .orderNumber(orderNum)
-                        .totalPrice(totalPrice)
-                        .paymentMethod("POINT")
                         .status("PAID")
+                        .paymentMethod("POINT")
+                        .totalPrice(totalPrice)   // ★ 반드시 여기에서 넣어야 함
                         .build()
         );
 
+        // OrderItem 저장 + 재고 차감
+        for (OrderRequestDTO.Item it : req.getItems()) {
 
-        // -------------------------------
-        // 6) 주문 상세 저장 + 재고 차감
-        // -------------------------------
-        Set<Long> updatedProductIds = new HashSet<>();
+            Product product = productRepository.findById(it.getProductId())
+                    .orElseThrow(() -> new RuntimeException("상품 없음"));
 
-        for (Cart c : carts) {
+            Integer quantity = it.getQuantity();
+            ProductOption option = null;
+            String displayOptionValue = "기본";
 
-            Product p = c.getProduct();
-            ProductOption opt = resolveCartOption(c);
-            int qty = c.getQuantity();
+            if (it.getOptionValues() != null &&
+                    !it.getOptionValues().isEmpty() &&
+                    !it.getOptionValues().get(0).equals("기본")) {
 
-            BigDecimal unitPrice = (opt != null) ? opt.getSellPrice() : p.getSellPrice();
+                String raw = it.getOptionValues().get(0);
+                String[] parts = raw.split(" ", 2);
 
-            // 주문 아이템 생성
+                if (parts.length == 2) {
+                    String title = parts[0].trim();
+                    String value = parts[1].trim();
+
+                    option = product.getProductOptions().stream()
+                            .filter(o ->
+                                    o.getOptionTitle().equalsIgnoreCase(title) &&
+                                            o.getOptionValue().equalsIgnoreCase(value)
+                            )
+                            .findFirst()
+                            .orElseThrow(() -> new RuntimeException("옵션 없음"));
+
+                    displayOptionValue = option.getOptionTitle() + " " + option.getOptionValue();
+                }
+            }
+
+            BigDecimal price = (option != null && option.getSellPrice() != null)
+                    ? option.getSellPrice()
+                    : product.getSellPrice();
+
+            BigDecimal subtotal = price.multiply(BigDecimal.valueOf(quantity));
+
+            // 재고 차감
+            if (option != null) {
+                if (option.getStock() < quantity) throw new RuntimeException("옵션 재고 부족");
+                option.setStock(option.getStock() - quantity);
+                productOptionRepository.save(option);
+            } else {
+                if (product.getStock() < quantity) throw new RuntimeException("상품 재고 부족");
+                product.setStock(product.getStock() - quantity);
+                productRepository.save(product);
+            }
+
             OrderItem orderItem = orderItemRepository.save(
                     OrderItem.builder()
                             .order(order)
-                            .product(p)
-                            .option(opt)
-                            .quantity(qty)
-                            .price(unitPrice)
-                            .mainImg(p.getMainImg())
-                            .productName(p.getProductName())
-                            .optionValue(opt != null ? opt.getOptionValue() : null)
+                            .product(product)
+                            .option(option)
+                            .quantity(quantity)
+                            .price(price)
+                            .mainImg(product.getMainImg())
+                            .productName(product.getProductName())
+                            .optionValue(displayOptionValue)
                             .build()
             );
 
-            // 프론트 반환 DTO
             itemDtos.add(
                     OrderItemDto.builder()
                             .orderItemId(orderItem.getOrderItemId())
                             .orderId(order.getOrderId())
-                            .productId(p.getProductId())
+                            .productId(product.getProductId())
                             .productName(orderItem.getProductName())
-                            .mainImg(baseUrl + orderItem.getMainImg())
-                            .optionId(opt != null ? opt.getOptionId() : null)
-                            .optionValue(orderItem.getOptionValue())
-                            .quantity(orderItem.getQuantity())
-                            .price(orderItem.getPrice())
-                            .subtotal(orderItem.getSubtotal())
+                            .mainImg(orderItem.getMainImg())
+                            .quantity(quantity)
+                            .price(price)
+                            .subtotal(subtotal)
+                            .optionId(option != null ? option.getOptionId() : null)
+                            .optionValue(displayOptionValue)
                             .build()
             );
-
-            // 재고 차감
-            if (opt != null) {
-                opt.setStock(opt.getStock() - qty);
-                productOptionRepository.save(opt);
-
-                updatedProductIds.add(p.getProductId()); // 옵션 상품만 대상
-            } else {
-                // 단일 상품은 product.stock 직접 감소
-                p.setStock(p.getStock() - qty);
-                productRepository.save(p);
-            }
         }
 
-        // -------------------------------
-        // 7) 옵션상품 재고 합산 → Product.stock 업데이트
-        // -------------------------------
-        for (Long productId : updatedProductIds) {
-
-            List<ProductOption> optionList =
-                    productOptionRepository.findByProduct_ProductId(productId);
-
-            int totalStock = optionList.stream()
-                    .mapToInt(ProductOption::getStock)
-                    .sum();
-
-            Product product = productRepository.findById(productId)
-                    .orElseThrow(() -> new RuntimeException("상품 없음"));
-
-            product.setStock(totalStock);
-            productRepository.save(product);
-        }
-
-        // -------------------------------
-        // 8) 장바구니 비우기
-        // -------------------------------
-        cartRepository.deleteAll(carts);
-
-
-        // -------------------------------
-        // 9) 최종 DTO 반환
-        // -------------------------------
         return OrderDto.builder()
                 .orderNumber(order.getOrderNumber())
                 .totalPrice(order.getTotalPrice())
-                .paymentMethod(order.getPaymentMethod())
                 .status(order.getStatus())
+                .paymentMethod(order.getPaymentMethod())
                 .address(MemberAddressDto.fromEntity(address))
                 .items(itemDtos)
+                .createdAt(order.getCreatedAt())
                 .build();
     }
 
@@ -292,39 +288,60 @@ public class OrderService {
 
     /** 카드/카카오페이 결제 */
     @Transactional
-    public PaymentOrderDto checkoutForCard(Long memberId, Long addressId) {
-
-        String baseUrl = musinsaConfig.getImageBaseUrl();
+    public PaymentOrderDto checkoutForCard(Long memberId, OrderRequestDTO req) {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new RuntimeException("회원 없음"));
 
-        MemberAddress address = memberAddressRepository.findById(addressId)
+        MemberAddress address = memberAddressRepository.findById(req.getAddressId())
                 .orElseThrow(() -> new RuntimeException("배송지 없음"));
-
-        List<Cart> carts = cartRepository.findByMember_Id(memberId);
-        if (carts.isEmpty()) throw new RuntimeException("장바구니가 비어 있습니다.");
 
         BigDecimal totalPrice = BigDecimal.ZERO;
 
-        // 재고 체크만 수행 (차감 X)
-        for (Cart c : carts) {
-            Product p = c.getProduct();
-            ProductOption opt = resolveCartOption(c);
-            int qty = c.getQuantity();
+        // items 기반으로 가격 & 재고 체크
+        for (OrderRequestDTO.Item it : req.getItems()) {
 
-            BigDecimal unitPrice = (opt != null) ? opt.getSellPrice() : p.getSellPrice();
+            Product product = productRepository.findById(it.getProductId())
+                    .orElseThrow(() -> new RuntimeException("상품 없음"));
 
-            if (opt != null && opt.getStock() < qty)
-                throw new RuntimeException("옵션 재고 부족: " + opt.getOptionValue());
+            Integer quantity = it.getQuantity();
+            ProductOption option = null;
 
-            if (opt == null && p.getStock() < qty)
-                throw new RuntimeException("상품 재고 부족: " + p.getProductName());
+            // 옵션 매칭
+            if (it.getOptionValues() != null &&
+                    !it.getOptionValues().isEmpty() &&
+                    !it.getOptionValues().get(0).equals("기본")) {
 
-            totalPrice = totalPrice.add(unitPrice.multiply(BigDecimal.valueOf(qty)));
+                String raw = it.getOptionValues().get(0);   // "색상 Ivory"
+                String[] parts = raw.split(" ", 2);
+
+                if (parts.length == 2) {
+                    String title = parts[0].trim();
+                    String value = parts[1].trim();
+
+                    option = product.getProductOptions().stream()
+                            .filter(o ->
+                                    o.getOptionTitle().equalsIgnoreCase(title) &&
+                                            o.getOptionValue().equalsIgnoreCase(value)
+                            )
+                            .findFirst()
+                            .orElseThrow(() -> new RuntimeException("옵션 없음"));
+                }
+            }
+
+            BigDecimal price = (option != null) ? option.getSellPrice() : product.getSellPrice();
+
+            // 🚨 재고 체크만 (차감은 결제 완료 후)
+            if (option != null && option.getStock() < quantity)
+                throw new RuntimeException("옵션 재고 부족");
+
+            if (option == null && product.getStock() < quantity)
+                throw new RuntimeException("상품 재고 부족");
+
+            totalPrice = totalPrice.add(price.multiply(BigDecimal.valueOf(quantity)));
         }
 
-        // READY 상태의 주문 생성 (결제 전)
+        // READY 상태 주문 생성
         Order order = orderRepository.save(
                 Order.builder()
                         .member(member)
@@ -348,58 +365,85 @@ public class OrderService {
                 .build();
     }
 
+    // Order 엔티티 조회용 메서드
+    public Order getOrderEntity(Long orderId) {
+        return orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("주문 없음"));
+    }
 
     /** 결제 성공 후 최종 확정 처리 */
     @Transactional
-    public void completeCardPayment(Long orderId) {
+    public void completeCardPayment(VerifyPaymentRequestDto req) {
 
-        String baseUrl = musinsaConfig.getImageBaseUrl();
-
-        Order order = orderRepository.findById(orderId)
+        Order order = orderRepository.findById(req.getOrderId())
                 .orElseThrow(() -> new RuntimeException("주문 없음"));
 
         if (!order.getStatus().equals("READY"))
             throw new RuntimeException("이미 결제 처리된 주문입니다.");
 
-        List<Cart> carts = cartRepository.findByMember_Id(order.getMember().getId());
-        if (carts.isEmpty()) throw new RuntimeException("장바구니 없음");
-
         Set<Long> updatedProductIds = new HashSet<>();
 
-        // OrderItem 생성 + 재고 차감
-        for (Cart c : carts) {
+        for (OrderRequestDTO.Item it : req.getItems()) {
 
-            Product p = c.getProduct();
-            ProductOption opt = resolveCartOption(c);
-            int qty = c.getQuantity();
+            Product product = productRepository.findById(it.getProductId())
+                    .orElseThrow(() -> new RuntimeException("상품 없음"));
 
-            BigDecimal unitPrice = (opt != null) ? opt.getSellPrice() : p.getSellPrice();
+            Integer quantity = it.getQuantity();
+            ProductOption option = null;
+            String displayOptionValue = "기본";
 
+            // 옵션 매칭
+            if (it.getOptionValues() != null &&
+                    !it.getOptionValues().isEmpty() &&
+                    !it.getOptionValues().get(0).equals("기본")) {
+
+                String raw = it.getOptionValues().get(0);  // "색상 Ivory"
+                String[] parts = raw.split(" ", 2);
+
+                if (parts.length == 2) {
+                    String title = parts[0].trim();
+                    String value = parts[1].trim();
+
+                    option = product.getProductOptions().stream()
+                            .filter(o ->
+                                    o.getOptionTitle().equalsIgnoreCase(title) &&
+                                            o.getOptionValue().equalsIgnoreCase(value)
+                            )
+                            .findFirst()
+                            .orElseThrow(() -> new RuntimeException("옵션 없음"));
+
+                    displayOptionValue = option.getOptionTitle() + " " + option.getOptionValue();
+                }
+            }
+
+            BigDecimal price = (option != null) ? option.getSellPrice() : product.getSellPrice();
+
+            // OrderItem 생성
             orderItemRepository.save(
                     OrderItem.builder()
                             .order(order)
-                            .product(p)
-                            .option(opt)
-                            .quantity(qty)
-                            .price(unitPrice)
-                            .productName(p.getProductName())
-                            .mainImg(p.getMainImg())
-                            .optionValue(opt != null ? opt.getOptionValue() : null)
+                            .product(product)
+                            .option(option)
+                            .quantity(quantity)
+                            .price(price)
+                            .productName(product.getProductName())
+                            .mainImg(product.getMainImg())
+                            .optionValue(displayOptionValue)
                             .build()
             );
 
             // 재고 차감
-            if (opt != null) {
-                opt.setStock(opt.getStock() - qty);
-                productOptionRepository.save(opt);
-                updatedProductIds.add(p.getProductId());
+            if (option != null) {
+                option.setStock(option.getStock() - quantity);
+                productOptionRepository.save(option);
+                updatedProductIds.add(product.getProductId());
             } else {
-                p.setStock(p.getStock() - qty);
-                productRepository.save(p);
+                product.setStock(product.getStock() - quantity);
+                productRepository.save(product);
             }
         }
 
-        // 옵션상품 → Product.stock 재계산
+        // 옵션상품일 경우 product.stock 재계산
         for (Long productId : updatedProductIds) {
 
             List<ProductOption> optionList =
@@ -416,10 +460,7 @@ public class OrderService {
             productRepository.save(product);
         }
 
-        // 장바구니 비우기
-        cartRepository.deleteAll(carts);
-
-        // 주문 상태 변경 → 결제 완료
+        // 결제 완료 처리
         order.setStatus("PAID");
         orderRepository.save(order);
     }

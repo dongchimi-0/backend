@@ -2,6 +2,7 @@ package com.ecommerce.project.backend.controller;
 
 import com.ecommerce.project.backend.domain.Member;
 import com.ecommerce.project.backend.dto.OrderDto;
+import com.ecommerce.project.backend.dto.OrderRequestDTO;
 import com.ecommerce.project.backend.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -20,19 +21,14 @@ public class OrderController {
 
     @PostMapping("/create")
     public ResponseEntity<?> createOrder(
-            @RequestBody Map<String, Object> data,
-            HttpServletRequest request
+            @RequestBody OrderRequestDTO req,
+            HttpSession session
     ) {
-
-        HttpSession session = request.getSession(false);
-        if (session == null) return ResponseEntity.status(401).build();
-
         Long memberId = (Long) session.getAttribute("loginMemberId");
-        if (memberId == null) return ResponseEntity.status(401).body("NOT_LOGIN");
+        if (memberId == null)
+            return ResponseEntity.status(401).body("NOT_LOGIN");
 
-        Long addressId = Long.valueOf(data.get("addressId").toString());
-
-        OrderDto order = orderService.checkout(memberId, addressId);
+        OrderDto order = orderService.checkout(memberId, req);
 
         return ResponseEntity.ok(order);
     }
@@ -51,7 +47,7 @@ public class OrderController {
     /** 카드 결제 주문 생성, 결제창 띄우기 전에 Order 생성 (status=READY) */
     @PostMapping("/checkout/card")
     public ResponseEntity<?> checkoutForCard(
-            @RequestParam Long addressId,
+            @RequestBody OrderRequestDTO req,
             HttpSession session
     ) {
         Long memberId = (Long) session.getAttribute("loginMemberId");
@@ -59,7 +55,6 @@ public class OrderController {
             return ResponseEntity.status(401).body("NOT_LOGIN");
         }
 
-        return ResponseEntity.ok(orderService.checkoutForCard(memberId, addressId));
+        return ResponseEntity.ok(orderService.checkoutForCard(memberId, req));
     }
-
 }
