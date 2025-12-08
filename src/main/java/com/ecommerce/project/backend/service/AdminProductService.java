@@ -87,8 +87,10 @@ public class AdminProductService {
 
         // 5. 대표 이미지 저장 (mainImg 처리)
         if (productDto.getMainImg() != null && !productDto.getMainImg().isEmpty()) {
+            String imageUrl = removeBaseUrl(productDto.getMainImg());  // BASE_URL 제거
+
             ProductImage mainImage = ProductImage.builder()
-                    .imageUrl(productDto.getMainImg())  // mainImg URL을 저장
+                    .imageUrl(imageUrl)  // BASE_URL을 제거한 경로 저장
                     .sortOrder(1)  // 대표 이미지는 정렬순서 1로 설정
                     .product(savedProduct)  // 상품과 연결
                     .build();
@@ -100,9 +102,11 @@ public class AdminProductService {
             int sortOrder = 2;  // 상세 이미지의 시작 sortOrder 값 (1은 대표 이미지 사용)
 
             // 각 imageUrl을 ProductImage 객체로 변환하여 저장
-            for (ProductImageDto productImageDto : productDto.getSubImages()) {  // subImages가 String의 리스트
+            for (ProductImageDto productImageDto : productDto.getSubImages()) {
+                String imageUrl = removeBaseUrl(productImageDto.getImageUrl());  // BASE_URL 제거
+
                 ProductImage productImage = ProductImage.builder()
-                        .imageUrl(productImageDto.getImageUrl())  // imageUrl로 문자열을 전달
+                        .imageUrl(imageUrl)  // BASE_URL을 제거한 경로 저장
                         .sortOrder(sortOrder++)  // 순서대로 증가
                         .product(savedProduct)  // 상품과 연결
                         .build();
@@ -241,8 +245,37 @@ public class AdminProductService {
         productRepository.delete(product);
     }
 
-    public List<Product> getAdminProductList() {
-        return productRepository.findAll();  // ★ 숨김 여부 상관없이 전체 조회
+    public List<ProductDto> getAdminProductList() {
+        String baseUrl = musinsaConfig.getImageBaseUrl();
+
+        return productRepository.findAll()  // 모든 상품 조회
+                .stream()
+                .map(p -> {
+                    // ProductDto로 변환하면서, 이미지 URL에서 BASE_URL 제거
+                    ProductDto productDto = ProductDto.fromEntity(p, baseUrl);
+
+                    // 대표 이미지 URL에서 BASE_URL 제거
+                    if (productDto.getMainImg() != null) {
+                        productDto.setMainImg(removeBaseUrl(productDto.getMainImg()));  // BASE_URL 제거
+                    }
+
+                    // 서브 이미지 URL에서 BASE_URL 제거
+                    if (productDto.getSubImages() != null) {
+                        productDto.setSubImages(
+                                productDto.getSubImages().stream()
+                                        .map(subImage -> {
+                                            // 각 서브 이미지에서 BASE_URL 제거
+                                            subImage.setImageUrl(removeBaseUrl(subImage.getImageUrl()));
+                                            return subImage;
+                                        })
+                                        .collect(Collectors.toList())
+                        );
+                    }
+
+                    return productDto;
+                })
+                .collect(Collectors.toList());
     }
+
 
 }
