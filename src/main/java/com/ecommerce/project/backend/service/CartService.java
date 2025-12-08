@@ -256,22 +256,40 @@ public class CartService {
     @Transactional
     public void updateQuantity(Long memberId, Long cartId, int quantity) {
 
-        if (quantity <= 0)
+        if (quantity <= 1)
             throw new IllegalArgumentException("수량은 1 이상");
 
-        /** row-level lock */
+        // row-level lock
         Cart cart = cartRepository.findForUpdate(cartId, memberId)
                 .orElseThrow(() -> new RuntimeException("장바구니 없음"));
 
         Product product = cart.getProduct();
 
-        int stock = product.getStock();  // 옵션이 없으면 상품의 재고 사용
+        // 핵심 포인트: 옵션 상품인지 여부 체크
+        if (product.getIsOption()) {
 
-        if (quantity > stock)
-            throw new IllegalArgumentException("재고 부족");
+            // 장바구니에 저장된 옵션값 기준으로 ProductOption 찾아야 함
+            ProductOption option = product.getProductOptions().stream()
+                    .filter(o -> o.getOptionValue().equals(cart.getOptionValue()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalArgumentException("옵션 없음"));
 
-        cart.setQuantity(quantity);  // 수량 업데이트
+            // 옵션 재고 기준 체크
+            if (quantity > option.getStock()) {
+                throw new IllegalArgumentException("재고 부족");
+            }
+
+        } else {
+            // 단일 상품
+            if (quantity > product.getStock()) {
+                throw new IllegalArgumentException("재고 부족");
+            }
+        }
+
+        // 검증 통과 → 수량 업데이트
+        cart.setQuantity(quantity);
     }
+
 
     /** -------------------------
      * 삭제

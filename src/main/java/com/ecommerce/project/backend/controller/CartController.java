@@ -71,14 +71,23 @@ public class CartController {
 
     /** 수량 변경 */
     @PutMapping("/quantity")
-    public ResponseEntity<?> updateQuantity(HttpServletRequest request,
-                                            @RequestBody CartUpdateQuantityDto req) {
+    public ResponseEntity<?> updateQuantity(
+            HttpServletRequest request,
+            @RequestBody CartUpdateQuantityDto req) {
 
-        return handleAuth(() -> {
+        try {
             Long memberId = getLoginMemberId(request);
-            cartService.updateQuantity(memberId, req.getCartId(), req.getQuantity()); // updateQuantity 호출
-        });
+            cartService.updateQuantity(memberId, req.getCartId(), req.getQuantity());
+            return ResponseEntity.ok().build();
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("서버 오류");
+        }
     }
+
+
 
     /** 옵션 변경 */
     @PutMapping("/option")
