@@ -16,6 +16,4 @@ public interface CategoryLinkRepository extends JpaRepository<CategoryLink, Long
     List<CategoryLink> findByCategoryCode(String categoryCode);
 
     void deleteAllByProduct_ProductId(Long productId);
-
-
 }

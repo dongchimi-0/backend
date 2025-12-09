@@ -36,13 +36,36 @@ public class AdminProductService {
      * @return BASE_URL이 제거된 이미지 경로 (예: /thumbnails/images/goods_img/...)
      */
     private String removeBaseUrl(String imageUrl) {
-        String baseUrl = musinsaConfig.getImageBaseUrl();
 
-        if (imageUrl != null && imageUrl.startsWith(baseUrl)) {
-            return imageUrl.substring(baseUrl.length());  // BASE_URL을 제거한 나머지 경로 반환
+        if (imageUrl == null) return null;
+
+        // 모든 공백 제거
+        imageUrl = imageUrl.trim();
+
+        // BASE_URL 후보들 전부 제거
+        String[] baseUrls = {
+                "https://image.msscdn.net",
+                "http://image.msscdn.net",
+                "https://image.msscdn.net/",
+                "http://image.msscdn.net/"
+        };
+
+        for (String base : baseUrls) {
+            if (imageUrl.startsWith(base)) {
+                return imageUrl.substring(base.length());
+            }
         }
 
-        return imageUrl;  // 만약 BASE_URL이 없다면 원래 URL을 그대로 반환
+        // BASE_URL 내부에 포함된 경우
+        for (String base : baseUrls) {
+            int idx = imageUrl.indexOf(base);
+            if (idx >= 0) {
+                return imageUrl.substring(idx + base.length());
+            }
+        }
+
+        // BASE_URL이 없으면 원본 유지
+        return imageUrl;
     }
 
     /**
@@ -66,8 +89,9 @@ public class AdminProductService {
         Category category = categoryRepository.findByCategoryCode(categoryCode)
                 .orElseThrow(() -> new RuntimeException("존재하지 않는 카테고리입니다."));
 
+        Product savedProduct = productRepository.save(product);
+
         // 4. 상품 옵션 처리
-//        List<ProductOption> options = new ArrayList<>();
         List<ProductOption> options;
         AtomicInteger totalStock = new AtomicInteger(0);
 
@@ -75,19 +99,26 @@ public class AdminProductService {
             options = productDto.getOptions().stream()
                     .map(optionDto -> {
                         totalStock.addAndGet(optionDto.getStock());  // AtomicInteger로 값을 더함
-                        return new ProductOption(optionDto, product);  // DTO -> Entity 변환
+                        return new ProductOption(optionDto, savedProduct);// DTO -> Entity 변환
                     })
                     .collect(Collectors.toList());
             productOptionRepository.saveAll(options);  // 옵션 일괄 저장
         }
 
         // 상품의 총 재고 갱신
-        product.setStock(totalStock.get());  // AtomicInteger의 값을 상품의 stock에 반영
-        Product savedProduct = productRepository.save(product);
+        if (productDto.getIsOption() != null && productDto.getIsOption()) {
+            // 옵션 상품: 옵션들의 재고 합산
+            savedProduct.setStock(totalStock.get());
+        } else {
+            // 단일 상품: DTO에서 입력한 재고값 사용
+            savedProduct.setStock(productDto.getStock());
+        }
 
         // 5. 대표 이미지 저장 (mainImg 처리)
         if (productDto.getMainImg() != null && !productDto.getMainImg().isEmpty()) {
             String imageUrl = removeBaseUrl(productDto.getMainImg());  // BASE_URL 제거
+
+            savedProduct.setMainImg(imageUrl);
 
             ProductImage mainImage = ProductImage.builder()
                     .imageUrl(imageUrl)  // BASE_URL을 제거한 경로 저장
@@ -124,101 +155,118 @@ public class AdminProductService {
     /**
      * 상품 수정
      */
+    @Transactional(rollbackOn = Exception.class)
     public Product updateProduct(Long productId, ProductDto productDto) {
 
         // 1. 기존 상품 조회
         Product existingProduct = productRepository.findById(productId)
                 .orElseThrow(() -> new RuntimeException("상품을 찾을 수 없습니다."));
 
-        // 2. 상품 유효성 검사 (재고, 가격 등)
-        if (productDto.getStock() < 0) {
-            throw new IllegalArgumentException("재고는 음수가 될 수 없습니다.");
-        }
-        if (productDto.getSellPrice().compareTo(productDto.getConsumerPrice()) > 0) {
+        // 2. 재고/가격 검증
+        if (productDto.getSellPrice() != null
+                && productDto.getConsumerPrice() != null
+                && productDto.getSellPrice().compareTo(productDto.getConsumerPrice()) > 0) {
             throw new IllegalArgumentException("판매가는 소비자가보다 높을 수 없습니다.");
         }
 
-        // 3. 상품의 메인 이미지 URL에서 BASE_URL 제거
-        String imageUrl = productDto.getMainImg();  // 상품 DTO에서 이미지 URL 가져오기
-        String dbImageUrl = removeBaseUrl(imageUrl);  // BASE_URL 제거
-        productDto.setMainImg(dbImageUrl);  // 수정된 URL을 DTO에 반영
+        Integer reqStock = (productDto.getStock() == null || productDto.getStock() < 0)
+                ? 0
+                : productDto.getStock();
 
-        // 4. 기존 상세 이미지 삭제 처리 (이미지 ID를 받아서 처리)
+        // 3. 메인 이미지 BASE_URL 제거
+        productDto.setMainImg(removeBaseUrl(productDto.getMainImg()));
+
+        // 4. 삭제 요청된 상세 이미지 제거
         if (productDto.getSubImagesToDelete() != null && !productDto.getSubImagesToDelete().isEmpty()) {
-            productImageRepository.deleteAllByImageIdIn(productDto.getSubImagesToDelete());  // 삭제할 이미지 ID 리스트로 삭제
+            productImageRepository.deleteAllByImageIdIn(productDto.getSubImagesToDelete());
         }
 
-        // 5. 상품 이미지 테이블에서 이미지 URL 처리
-        List<ProductImage> productImages = productImageRepository.findByProduct_ProductIdOrderBySortOrderAsc(productId);
-        productImages.forEach(productImage -> {
-            String imageUrlInProductImage = productImage.getImageUrl();  // ProductImage 테이블에서 이미지 URL 가져오기
-            String updatedImageUrl = removeBaseUrl(imageUrlInProductImage);  // BASE_URL 제거
-            productImage.setImageUrl(updatedImageUrl);  // 수정된 URL을 저장
-        });
+        // 5. 상세 이미지 전체 삭제 후 재삽입
+        if (productDto.getSubImages() != null) {
 
-        // 6. 상세 이미지 처리 (subImages 처리)
-        if (productDto.getSubImages() != null && !productDto.getSubImages().isEmpty()) {
-            int sortOrder = 2;  // 상세 이미지의 시작 sortOrder 값 (1은 대표 이미지 사용)
+            // 기존 상세 이미지 전부 삭제
+            productImageRepository.deleteAllByProduct_ProductId(productId);
 
-            // 기존의 상세 이미지들을 삭제하고 새로운 이미지들 추가
-            productImageRepository.deleteAllByProduct_ProductId(productId);  // 기존 이미지 삭제
-
-            for (ProductImageDto productImageDto : productDto.getSubImages()) {
-                // subImages가 String의 리스트이므로, URL에서 BASE_URL을 제거한 후 저장
-                String imageUrlInSubImage = removeBaseUrl(productImageDto.getImageUrl());  // BASE_URL 제거
-                ProductImage productImage = productImageDto.toEntity(existingProduct);  // DTO -> Entity 변환
-                productImage.setImageUrl(imageUrlInSubImage);  // 이미지 URL 업데이트
-                productImageRepository.save(productImage);  // 이미지 저장
+            int sortOrder = 1;
+            for (ProductImageDto dto : productDto.getSubImages()) {
+                ProductImage img = dto.toEntity(existingProduct);
+                img.setImageUrl(removeBaseUrl(dto.getImageUrl()));
+                img.setSortOrder(sortOrder++);
+                productImageRepository.save(img);
             }
         }
 
-        // 7. 상품 옵션 처리
-//        List<ProductOption> options = new ArrayList<>();
-        List<ProductOption> options;
+    /* ============================
+       6. 옵션 처리
+       ============================ */
+
+        List<Long> deleteIds = productDto.getDeleteOptionIds() == null
+                ? List.of()
+                : productDto.getDeleteOptionIds();
+
         AtomicInteger totalStock = new AtomicInteger(0);
 
-        // 기존 옵션 삭제 (옵션이 있으면 삭제)
-        if (productDto.getIsOption() != null && productDto.getIsOption()) {
-            productOptionRepository.deleteAllByProduct_ProductId(productId);  // 기존 옵션 삭제
+        boolean isOptionMode = Boolean.TRUE.equals(productDto.getIsOption());
+        boolean hasOptions = productDto.getOptions() != null && !productDto.getOptions().isEmpty();
 
-            // 새 옵션 추가
-            options = productDto.getOptions().stream()
-                    .map(optionDto -> {
-                        totalStock.addAndGet(optionDto.getStock());
-                        return new ProductOption(optionDto, existingProduct);  // DTO -> Entity 변환
-                    })
-                    .collect(Collectors.toList());
+        // ① 옵션상품인 경우 + 옵션 리스트가 비어있지 않은 경우만 처리
+        if (isOptionMode && hasOptions) {
 
-            productOptionRepository.saveAll(options);  // 새 옵션 일괄 저장
+            // 삭제 대상 옵션 제거
+            if (!deleteIds.isEmpty()) {
+                productOptionRepository.deleteAllById(deleteIds);
+            }
+
+            // 옵션 업데이트 / 추가
+            for (ProductOptionDto optDto : productDto.getOptions()) {
+
+                if (optDto.getOptionId() != null && deleteIds.contains(optDto.getOptionId())) {
+                    continue;
+                }
+
+                if (optDto.getOptionId() != null) {
+                    ProductOption existing = productOptionRepository.findById(optDto.getOptionId()).orElse(null);
+                    if (existing != null) {
+                        existing.updateFromDto(optDto);
+                        totalStock.addAndGet(existing.getStock());
+                    }
+                } else {
+                    ProductOption newOpt = new ProductOption(optDto, existingProduct);
+                    productOptionRepository.save(newOpt);
+                    totalStock.addAndGet(newOpt.getStock());
+                }
+            }
+
+            existingProduct.setIsOption(true);
+            existingProduct.setStock(totalStock.get());
         }
 
-        // 8. 총 재고 처리 (옵션 상품일 경우 옵션 재고 합산, 아니면 상품Dto에서 받은 재고로 업데이트)
-        if (existingProduct.getIsOption()) {
-            existingProduct.getOptions().stream()
-                    .forEach(option -> totalStock.addAndGet(option.getStock()));  // 각 옵션의 재고를 더합니다.
-        } else {
-            totalStock.set(existingProduct.getStock());  // 옵션이 없으면 기본 상품의 재고를 설정합니다.
+        // ② 옵션이 아예 없는 경우 → deleteOptionIds 무시하고 전체 옵션 삭제
+        else {
+
+            productOptionRepository.deleteAllByProduct_ProductId(productId);
+
+            existingProduct.setIsOption(false);
+            existingProduct.setStock(reqStock);
         }
 
-        // 상품의 총 재고 갱신
-        existingProduct.setStock(totalStock.get());  // AtomicInteger의 값을 상품의 stock에 반영
+    /* ============================
+       7. 카테고리 재맵핑
+       ============================ */
+        categoryLinkRepository.deleteAllByProduct_ProductId(productId);
 
-        // 9. 카테고리 처리 (상품과 연결된 카테고리 수정)
-        List<CategoryLink> categoryLinks = categoryLinkRepository.findByProduct_ProductId(productId);
-        CategoryLink categoryLink = categoryLinks.stream()
-                .findFirst()  // List에서 첫 번째 항목을 가져옵니다.
-                .orElseThrow(() -> new RuntimeException("CategoryLink not found for productId: " + productId));  // 값이 없을 경우 예외 처리
-        CategoryLink updatedCategoryLink = new CategoryLink(categoryLink.getProduct(), productDto.getCategoryCode());
-        categoryLinkRepository.save(updatedCategoryLink);  // 새로운 객체 저장
+        Category newCategory = categoryRepository.findByCategoryCode(productDto.getCategoryCode())
+                .orElseThrow(() -> new RuntimeException("존재하지 않는 카테고리입니다."));
 
-        // 10. 상품 정보 업데이트 (상품 이름, 가격 등 기본 정보 업데이트)
+        categoryLinkRepository.save(new CategoryLink(existingProduct, newCategory.getCategoryCode()));
+
+    /* ============================
+       8. 나머지 기본 정보 업데이트
+       ============================ */
         existingProduct.updateProductInfo(productDto);
 
-        // 11. 수정된 상품 저장 (모든 수정 사항을 반영하여 상품 저장)
-        return productRepository.save(existingProduct);  // 수정된 상품 반환
+        return productRepository.save(existingProduct);
     }
-
-
 
     @Transactional
     public void deleteProduct(Long productId) {
