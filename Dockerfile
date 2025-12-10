@@ -2,7 +2,9 @@ FROM eclipse-temurin:17-jdk AS builder
 WORKDIR /app
 
 COPY . .
-RUN ./gradlew bootJar
+
+# gradlew에 실행 권한 부여
+RUN chmod +x gradlew
 
 FROM eclipse-temurin:17-jdk
 WORKDIR /app
