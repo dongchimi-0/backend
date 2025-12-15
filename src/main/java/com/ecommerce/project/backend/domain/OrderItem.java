@@ -24,15 +24,9 @@ public class OrderItem {
     @JoinColumn(name = "order_id", nullable = false)
     private Order order;
 
-
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "option_id")
-    private ProductOption option;
 
     @Column(nullable = false)
     private Integer quantity;
@@ -44,7 +38,7 @@ public class OrderItem {
     private BigDecimal subtotal;
 
     // ---------------------------
-    // ✅ 주문 시 저장되는 스냅샷 정보
+    //  주문 시 저장되는 스냅샷 정보
     // ---------------------------
     @Column(name = "product_name")
     private String productName;

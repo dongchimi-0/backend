@@ -61,12 +61,6 @@ public class ProductImage {
         return new ProductImage(imageDto.getImageUrl(), imageDto.getSortOrder(), product);
     }
 
-//    public void setProduct(Product product) {
-//        this.product = product;
-//    }
-
-//    public ProductImage() {}
-
     public long getProductId() {
         return product.getProductId();
     }
@@ -90,5 +84,5 @@ public class ProductImage {
     public void setImageUrl(String imageUrl) {
         this.imageUrl = imageUrl;  // imageUrl 수정용 setter
     }
-
+    public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
 }

@@ -40,9 +40,6 @@ public class ProductOption {
     @Column(name = "sell_price", precision = 10, scale = 2)
     private BigDecimal sellPrice; // 옵션별 판매가
 
-    @Column(name = "extra_price", precision = 10, scale = 2)
-    private BigDecimal extraPrice;  // 옵션 추가금 (없으면 0)
-
     @Column(name = "is_show", columnDefinition = "TINYINT(1) DEFAULT 1")
     private Boolean isShow; // 옵션 노출 여부 (true=보임, false=숨김)
 
@@ -102,22 +99,6 @@ public class ProductOption {
         }
         this.stock = newStock;
     }
-
-    // 생성자 추가
-//    public ProductOption(
-//    String optionTitle, String optionValue, Integer stock, Boolean isShow,
-//                         String colorCode, BigDecimal sellPrice, BigDecimal consumerPrice,
-//                         Product product, ProductDto dto) {
-//        this.optionTitle = optionTitle;
-//        this.optionValue = optionValue;
-//        this.stock = stock;
-//        this.isShow = isShow;
-//        this.colorCode = colorCode;
-//        this.sellPrice = sellPrice;
-//        this.consumerPrice = consumerPrice;
-//        this.product = product;
-//    }
-
     // ProductOptionDto를 ProductOption으로 변환하는 생성자 추가
     public ProductOption(ProductOptionDto optionDto, Product product) {
         this.optionTitle = optionDto.getOptionTitle();
@@ -129,6 +110,22 @@ public class ProductOption {
         this.consumerPrice = optionDto.getConsumerPrice();
         this.product = product; // Product와 연결
         this.optionType = optionDto.getOptionType();
+    }
+
+    // 옵션 수정 로직 (UPDATE용)
+    public void updateFromDto(ProductOptionDto dto) {
+
+        this.optionType = dto.getOptionType();
+        this.optionTitle = dto.getOptionTitle();
+        this.optionValue = dto.getOptionValue();
+
+        this.stock = dto.getStock();
+        this.isShow = dto.getIsShow();
+
+        this.colorCode = dto.getColorCode();
+
+        this.sellPrice = dto.getSellPrice();
+        this.consumerPrice = dto.getConsumerPrice();
     }
 
     // getIsShow 메서드 추가 (Boolean 타입 반환)

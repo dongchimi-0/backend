@@ -27,8 +27,6 @@ public class OrderService {
     private final MemberAddressRepository memberAddressRepository;
     private final MusinsaConfig musinsaConfig;
 
-
-
     // 주문 번호 생성
     String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
     String random = UUID.randomUUID().toString().substring(0, 6);
@@ -110,7 +108,7 @@ public class OrderService {
                         .orderNumber(orderNum)
                         .status("PAID")
                         .paymentMethod("POINT")
-                        .totalPrice(totalPrice)   // ★ 반드시 여기에서 넣어야 함
+                        .totalPrice(totalPrice)
                         .build()
         );
 
@@ -158,6 +156,11 @@ public class OrderService {
                 if (option.getStock() < quantity) throw new RuntimeException("옵션 재고 부족");
                 option.setStock(option.getStock() - quantity);
                 productOptionRepository.save(option);
+
+                // 옵션 재고 변경 후 product.stock 재계산
+                product.updateTotalStockFromOptions();
+                productRepository.save(product);
+
             } else {
                 if (product.getStock() < quantity) throw new RuntimeException("상품 재고 부족");
                 product.setStock(product.getStock() - quantity);
@@ -168,7 +171,6 @@ public class OrderService {
                     OrderItem.builder()
                             .order(order)
                             .product(product)
-                            .option(option)
                             .quantity(quantity)
                             .price(price)
                             .mainImg(product.getMainImg())
@@ -427,7 +429,6 @@ public class OrderService {
                     OrderItem.builder()
                             .order(order)
                             .product(product)
-                            .option(option)
                             .quantity(quantity)
                             .price(price)
                             .productName(product.getProductName())
